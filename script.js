@@ -244,7 +244,7 @@ function renderGrid() {
         } else {
             tileEl.className = 'tile tile-add';
             tileEl.innerHTML = '<i class="ri-add-line"></i>';
-            tileEl.onclick = () => openEditModal(i, null);
+            tileEl.onclick = () => openAppCatalog(i, false);
             tileEl.ondragover = (e) => e.preventDefault();
             tileEl.ondrop = (e) => drop(e, i);
         }
@@ -643,16 +643,45 @@ const recommendedPlatforms = [
     { name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F' }
 ];
 
+let onboardingSelected = new Set();
+let onboardingTargetPos = null;
+let isOnboardingMode = false;
+
 function initOnboarding() {
     // Check if run before
     if (localStorage.getItem('gridify_onboarded')) return;
+    openAppCatalog(null, true);
+}
+
+function openAppCatalog(targetPos, isOnboarding = false) {
+    onboardingTargetPos = targetPos;
+    isOnboardingMode = isOnboarding;
+    onboardingSelected.clear();
 
     const modal = document.getElementById('onboarding-modal');
     const grid = document.getElementById('onboarding-grid');
     const finishBtn = document.getElementById('finish-onboarding-btn');
-    const selected = new Set(); // Store indices or names
+    const customBtn = document.getElementById('custom-website-btn');
 
+    // Reset UI
+    grid.innerHTML = '';
     modal.classList.remove('hidden');
+
+    // Update Text
+    const title = modal.querySelector('h2');
+    const subtitle = modal.querySelector('p');
+
+    if (isOnboarding) {
+        if (title) title.textContent = "Welcome to Gridify";
+        if (subtitle) subtitle.textContent = "Select the platforms you use to build your dashboard.";
+        finishBtn.textContent = "Get Started";
+        if (customBtn) customBtn.classList.add('hidden');
+    } else {
+        if (title) title.textContent = "Add Apps";
+        if (subtitle) subtitle.textContent = "Select apps to add to your webmix.";
+        finishBtn.textContent = "Add Selected";
+        if (customBtn) customBtn.classList.remove('hidden');
+    }
 
     // Populate
     recommendedPlatforms.forEach((p, idx) => {
@@ -664,70 +693,121 @@ function initOnboarding() {
         `;
 
         card.onclick = () => {
-            if (selected.has(idx)) {
-                selected.delete(idx);
+            if (onboardingSelected.has(idx)) {
+                onboardingSelected.delete(idx);
                 card.classList.remove('selected');
             } else {
-                selected.add(idx);
+                onboardingSelected.add(idx);
                 card.classList.add('selected');
             }
         };
         grid.appendChild(card);
     });
 
-    finishBtn.onclick = () => {
-        // Build new tiles list
-        const newTiles = [];
-        let pos = 0;
-        selected.forEach(idx => {
-            const p = recommendedPlatforms[idx];
-            newTiles.push({
-                id: 't-' + Date.now() + '-' + idx,
-                position: pos++,
-                name: p.name,
-                url: p.url,
-                icon: p.icon,
-                color: p.color,
-                showText: true
-            });
-        });
+    finishBtn.onclick = handleOnboardingFinish;
 
-        // If user selected nothing, maybe keep defaults? Or empty?
-        // Let's assume they want what they selected. If empty, give em Google.
+    if (customBtn) {
+        customBtn.onclick = () => {
+            modal.classList.add('hidden');
+            // Open standard edit modal
+            openEditModal(onboardingTargetPos !== null ? onboardingTargetPos : 0, null);
+        };
+    }
+}
+
+function handleOnboardingFinish() {
+    const modal = document.getElementById('onboarding-modal');
+    const activeWebmix = getActiveWebmix();
+
+    // Build new tiles list
+    const newTiles = [];
+    let pos = isOnboardingMode ? 0 : (onboardingTargetPos !== null ? onboardingTargetPos : 0);
+
+    // Find next available slots if appending
+    // If specific targetPos is clicked, we put first one there.
+    // Others go to next available slots? Or just sequential?
+    // Let's go sequential from pos.
+
+    onboardingSelected.forEach(idx => {
+        const p = recommendedPlatforms[idx];
+
+        // If appending, check if slot is taken. 
+        // Simple approach: Shift existing tiles or just overwrite empty?
+        // Gridify usually implies fixed slots. 
+        // Let's just place them. If slot taken, find next empty.
+
+        if (!isOnboardingMode) {
+            // Find next empty spot >= pos
+            while (activeWebmix.tiles.some(t => t.position === pos)) {
+                pos++;
+            }
+        }
+
+        newTiles.push({
+            id: 't-' + Date.now() + '-' + idx,
+            position: pos++,
+            name: p.name,
+            url: p.url,
+            icon: p.icon,
+            color: p.color,
+            showText: true
+        });
+    });
+
+    if (isOnboardingMode) {
+        // Overwrite standard Home webmix
+        const homeWm = state.webmixes.find(w => w.id === 'wm-home');
+
         if (newTiles.length === 0) {
+            // Default if empty
             newTiles.push({ id: 't-def', position: 0, name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4', showText: true });
         }
 
-        // Overwrite standard Home webmix
-        const homeWm = state.webmixes.find(w => w.id === 'wm-home');
         if (homeWm) {
             homeWm.tiles = newTiles;
         }
-
         localStorage.setItem('gridify_onboarded', 'true');
+        showToast("Welcome to Gridify!", "success");
+    } else {
+        // Append Mode
+        if (newTiles.length > 0) {
+            activeWebmix.tiles = [...activeWebmix.tiles, ...newTiles];
+            showToast(`${newTiles.length} apps added.`, "success");
+        }
+    }
+
+    saveState();
+    renderGrid();
+    modal.classList.add('hidden');
+}
+
+// Drag and Drop Logic
+function dragStart(e, position) {
+    e.dataTransfer.setData('text/plain', position);
+    e.target.style.opacity = '0.4';
+}
+
+function drop(e, targetPosition) {
+    e.preventDefault();
+    const sourcePosition = parseInt(e.dataTransfer.getData('text/plain'));
+    const activeWebmix = getActiveWebmix();
+
+    const sourceTileIndex = activeWebmix.tiles.findIndex(t => t.position === sourcePosition);
+    const targetTileIndex = activeWebmix.tiles.findIndex(t => t.position === targetPosition);
+
+    if (sourceTileIndex !== -1) {
+        // Move source tile to target position
+        activeWebmix.tiles[sourceTileIndex].position = targetPosition;
+
+        // If there was a tile at target, swap it to source position
+        if (targetTileIndex !== -1) {
+            activeWebmix.tiles[targetTileIndex].position = sourcePosition;
+        }
+
         saveState();
         renderGrid();
-        modal.classList.add('hidden');
-        showToast("Welcome to Gridify!", "success");
-    };
+    }
 }
 
-// Assuming 'init' function is defined elsewhere and needs to be updated.
-// Since the 'init' function definition is not provided in the snippet,
-// this change assumes it exists and adds the call to it.
-// Original init function was:
-/*
-function init() {
-    loadState();
-    renderSidebar();
-    renderGrid();
-    setupEventListeners();
-    setupGlobalUpload();
-    setupWallpaperGallery();
-    initOnboarding(); // Add this line
-}
-*/
-// The previous step added a dummy init() at the end. I should remove it and ensure the REAL init() calls initOnboarding.
-
-// Removing the dummy lines added by mistake in previous step.
-// And calling init() properly.
+// Start the app
+init();
