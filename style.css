@@ -955,7 +955,8 @@ body {
 /* Widgets */
 #widget-layer {
     position: fixed;
-    top: var(--header-height);
+    top: 0;
+    /* Allow widgets in top area */
     left: 0;
     right: 0;
     bottom: 0;

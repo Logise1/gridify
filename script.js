@@ -1208,7 +1208,7 @@ function renderWidgets() {
         const contentBox = el.querySelector('.widget-content');
         const header = el.querySelector('.widget-header');
 
-        // === CLOCK WIDGET ===
+        // === CLOCK WIDGET (Digital) ===
         if (w.type === 'clock') {
             header.innerHTML = `<i class="ri-time-line" style="margin-right: 5px;"></i> Reloj & Fecha`;
 
@@ -1217,23 +1217,228 @@ function renderWidgets() {
                 const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const dateStr = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
+                // Get widget width for responsive sizing
+                const widgetWidth = parseFloat(el.style.width) || 250;
+                const isCompact = widgetWidth < 220;
+                const timeSize = isCompact ? '2rem' : '3.5rem';
+                const dateSize = isCompact ? '0.7rem' : '0.95rem';
+
                 contentBox.innerHTML = `
-                    <div style="font-size: 3.5rem; font-weight: 700; background: linear-gradient(135deg, #4CC9F0, #3A86FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 2s ease-in-out infinite;">
+                    <div style="font-size: ${timeSize}; font-weight: 700; background: linear-gradient(135deg, #4CC9F0, #3A86FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 2s ease-in-out infinite;">
                         ${timeStr}
                     </div>
-                    <div style="font-size: 0.95rem; opacity: 0.7; text-transform: capitalize; margin-top: 10px;">
+                    <div style="font-size: ${dateSize}; opacity: 0.7; text-transform: capitalize; margin-top: 10px;">
                         ${dateStr}
                     </div>
                 `;
             };
             update();
             widgetIntervals.push(setInterval(update, 1000));
+
+            // Listen for resize to update sizes
+            el.addEventListener('widgetResize', update);
         }
+
+        // === ANALOG CLOCK WIDGET ===
+        if (w.type === 'analog-clock') {
+            header.innerHTML = `<i class="ri-time-line" style="margin-right: 5px;"></i> Reloj Analógico`;
+
+            const canvasId = `canvas-${w.id}`;
+            contentBox.innerHTML = `<canvas id="${canvasId}" style="width: 100%; height: 100%;"></canvas>`;
+
+            const drawClock = () => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                const rect = contentBox.getBoundingClientRect();
+
+                // Set canvas size to match container
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) * 0.85;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw clock face
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(76, 201, 240, 0.1)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(76, 201, 240, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw hour markers
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i * 30 * Math.PI) / 180 - Math.PI / 2;
+                    const x1 = centerX + Math.cos(angle) * radius * 0.85;
+                    const y1 = centerY + Math.sin(angle) * radius * 0.85;
+                    const x2 = centerX + Math.cos(angle) * radius * 0.95;
+                    const y2 = centerY + Math.sin(angle) * radius * 0.95;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = '#4CC9F0';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Draw minute markers
+                for (let i = 0; i < 60; i++) {
+                    if (i % 5 !== 0) {
+                        const angle = (i * 6 * Math.PI) / 180 - Math.PI / 2;
+                        const x1 = centerX + Math.cos(angle) * radius * 0.90;
+                        const y1 = centerY + Math.sin(angle) * radius * 0.90;
+                        const x2 = centerX + Math.cos(angle) * radius * 0.95;
+                        const y2 = centerY + Math.sin(angle) * radius * 0.95;
+
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.strokeStyle = 'rgba(76, 201, 240, 0.3)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+
+                // Get current time
+                const now = new Date();
+                const hours = now.getHours() % 12;
+                const minutes = now.getMinutes();
+                const seconds = now.getSeconds();
+
+                // Draw hour hand
+                const hourAngle = ((hours + minutes / 60) * 30 * Math.PI) / 180 - Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(hourAngle) * radius * 0.5,
+                    centerY + Math.sin(hourAngle) * radius * 0.5
+                );
+                ctx.strokeStyle = '#4CC9F0';
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Draw minute hand
+                const minuteAngle = ((minutes + seconds / 60) * 6 * Math.PI) / 180 - Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(minuteAngle) * radius * 0.7,
+                    centerY + Math.sin(minuteAngle) * radius * 0.7
+                );
+                ctx.strokeStyle = '#3A86FF';
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Draw second hand
+                const secondAngle = (seconds * 6 * Math.PI) / 180 - Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(secondAngle) * radius * 0.8,
+                    centerY + Math.sin(secondAngle) * radius * 0.8
+                );
+                ctx.strokeStyle = '#FF6B6B';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Draw center dot
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = '#4CC9F0';
+                ctx.fill();
+            };
+
+            // Initial draw
+            setTimeout(drawClock, 100);
+
+            // Update every second
+            widgetIntervals.push(setInterval(drawClock, 1000));
+
+            // Redraw on resize
+            el.addEventListener('widgetResize', drawClock);
+        }
+
 
         // === WEATHER WIDGET ===
         if (w.type === 'weather') {
             header.innerHTML = `<i class="ri-sun-cloudy-line" style="margin-right: 5px;"></i> Clima`;
             contentBox.innerHTML = `<i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>`;
+
+            let weatherData = null; // Cache weather data
+
+            const renderWeather = () => {
+                if (!weatherData) return;
+
+                const { temp, weatherCode, dailyData } = weatherData;
+
+                // Get widget size for responsive design
+                const widgetWidth = parseFloat(el.style.width) || 250;
+                const isCompact = widgetWidth < 250;
+
+                const iconSize = isCompact ? '2rem' : '3rem';
+                const tempSize = isCompact ? '1.5rem' : '2.2rem';
+                const dayFontSize = isCompact ? '0.55rem' : '0.7rem';
+                const dayIconSize = isCompact ? '1rem' : '1.3rem';
+                const dayTempSize = isCompact ? '0.7rem' : '0.85rem';
+                const marginBottom = isCompact ? '6px' : '12px';
+
+                // Weather icons based on code
+                let icon = 'ri-sun-line';
+                let gradient = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                if (weatherCode > 50 && weatherCode < 70) { icon = 'ri-rainy-line'; gradient = 'linear-gradient(135deg, #4CC9F0, #3A86FF)'; }
+                else if (weatherCode > 70) { icon = 'ri-snowy-line'; gradient = 'linear-gradient(135deg, #E0E0E0, #4CC9F0)'; }
+                else if (weatherCode > 0) { icon = 'ri-cloudy-line'; gradient = 'linear-gradient(135deg, #A0A0A0, #606060)'; }
+
+                // Forecast for 7 days horizontal
+                const today = new Date();
+                const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                const getWeatherIcon = (code) => {
+                    if (code > 70) return 'ri-snowy-line';
+                    if (code > 50) return 'ri-rainy-line';
+                    if (code > 0) return 'ri-cloudy-line';
+                    return 'ri-sun-line';
+                };
+                let forecastHTML = '';
+
+                for (let i = 0; i < 7; i++) {
+                    const futureDate = new Date(today);
+                    futureDate.setDate(today.getDate() + i);
+                    const dayName = i === 0 ? 'Hoy' : days[futureDate.getDay()];
+                    const maxTemp = Math.round(dailyData.temperature_2m_max[i]);
+                    const dayIcon = getWeatherIcon(dailyData.weathercode[i]);
+
+                    forecastHTML += `
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0;">
+                            <div style="font-size: ${dayFontSize}; opacity: 0.6; white-space: nowrap;">${dayName}</div>
+                            <i class="${dayIcon}" style="font-size: ${dayIconSize}; opacity: 0.8;"></i>
+                            <div style="font-size: ${dayTempSize}; font-weight: 600;">${maxTemp}°</div>
+                        </div>
+                    `;
+                }
+
+                contentBox.innerHTML = `
+                    <div style="text-align: center; margin-bottom: ${marginBottom};">
+                        <i class="${icon}" style="font-size: ${iconSize}; background: ${gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+                        <div style="font-size: ${tempSize}; font-weight: 700; margin-top: 4px;">
+                            ${temp}°C
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px; width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px; justify-content: space-between;">
+                        ${forecastHTML}
+                    </div>
+                `;
+            };
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
@@ -1242,55 +1447,12 @@ function renderWidgets() {
                         .then(r => r.json())
                         .then(d => {
                             if (d.current_weather && d.daily) {
-                                const temp = Math.round(d.current_weather.temperature);
-                                const weatherCode = d.current_weather.weathercode;
-
-                                // Weather icons based on code
-                                let icon = 'ri-sun-line';
-                                let gradient = 'linear-gradient(135deg, #FFD700, #FFA500)';
-                                if (weatherCode > 50 && weatherCode < 70) { icon = 'ri-rainy-line'; gradient = 'linear-gradient(135deg, #4CC9F0, #3A86FF)'; }
-                                else if (weatherCode > 70) { icon = 'ri-snowy-line'; gradient = 'linear-gradient(135deg, #E0E0E0, #4CC9F0)'; }
-                                else if (weatherCode > 0) { icon = 'ri-cloudy-line'; gradient = 'linear-gradient(135deg, #A0A0A0, #606060)'; }
-
-
-                                // Forecast for 7 days horizontal
-                                const today = new Date();
-                                const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-                                const getWeatherIcon = (code) => {
-                                    if (code > 70) return 'ri-snowy-line';
-                                    if (code > 50) return 'ri-rainy-line';
-                                    if (code > 0) return 'ri-cloudy-line';
-                                    return 'ri-sun-line';
+                                weatherData = {
+                                    temp: Math.round(d.current_weather.temperature),
+                                    weatherCode: d.current_weather.weathercode,
+                                    dailyData: d.daily
                                 };
-                                let forecastHTML = '';
-
-                                for (let i = 0; i < 7; i++) {
-                                    const futureDate = new Date(today);
-                                    futureDate.setDate(today.getDate() + i);
-                                    const dayName = i === 0 ? 'Hoy' : days[futureDate.getDay()];
-                                    const maxTemp = Math.round(d.daily.temperature_2m_max[i]);
-                                    const dayIcon = getWeatherIcon(d.daily.weathercode[i]);
-
-                                    forecastHTML += `
-                                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0;">
-                                            <div style="font-size: 0.7rem; opacity: 0.6; white-space: nowrap;">${dayName}</div>
-                                            <i class="${dayIcon}" style="font-size: 1.3rem; opacity: 0.8;"></i>
-                                            <div style="font-size: 0.85rem; font-weight: 600;">${maxTemp}°</div>
-                                        </div>
-                                    `;
-                                }
-
-                                contentBox.innerHTML = `
-                                    <div style="text-align: center; margin-bottom: 12px;">
-                                        <i class="${icon}" style="font-size: 3rem; background: ${gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
-                                        <div style="font-size: 2.2rem; font-weight: 700; margin-top: 4px;">
-                                            ${temp}°C
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; gap: 6px; width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px; justify-content: space-between;">
-                                        ${forecastHTML}
-                                    </div>
-                                `;
+                                renderWeather();
                             } else {
                                 contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ No disponible</div>`;
                             }
@@ -1302,6 +1464,9 @@ function renderWidgets() {
             } else {
                 contentBox.innerHTML = `<div style="opacity: 0.5;">Geolocalización no soportada</div>`;
             }
+
+            // Listen for resize events
+            el.addEventListener('widgetResize', renderWeather);
         }
 
         // === STOCK/MARKETS WIDGET ===
