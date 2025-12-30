@@ -314,21 +314,30 @@ function renderGrid() {
             // Theme Logic
             let displayColor = tileData.color || '#fff'; // Default
 
-            // 1. Force Category Color (Restored)
+            // 1. Force Category Color based on original logic
             if (tileData.category && categoryColors[tileData.category]) {
                 displayColor = categoryColors[tileData.category];
             }
 
-            // 2. Override if a specific GLOBAL MONO theme is set
-            if (state.settings.themeColor && state.settings.themeColor !== 'original') {
-                displayColor = state.settings.themeColor;
+            let bgOpacity = (tileData.name === 'Outlook') ? 0.35 : 0.2;
+            let rgbaBg;
+            let borderColor;
+
+            // Theme Modes
+            if (state.settings.themeColor === 'glass') {
+                // Glass Mode: Transparent bg, original/category icon color
+                rgbaBg = 'rgba(255, 255, 255, 0.05)';
+                borderColor = 'rgba(255, 255, 255, 0.2)';
+            } else {
+                // Monocolor or Original with Tint
+                if (state.settings.themeColor && state.settings.themeColor !== 'original') {
+                    displayColor = state.settings.themeColor;
+                }
+                rgbaBg = hexToRgba(displayColor, bgOpacity);
+                borderColor = hexToRgba(displayColor, 0.3);
             }
 
-            // Calculate Background: "Tonos del fondo"
-            // Outlook should be more visible (higher opacity)
-            let bgOpacity = (tileData.name === 'Outlook') ? 0.35 : 0.2;
-            let rgbaBg = hexToRgba(displayColor, bgOpacity);
-            tileEl.style.borderColor = hexToRgba(displayColor, 0.3);
+            tileEl.style.borderColor = borderColor;
             tileEl.style.backgroundColor = rgbaBg;
 
             // Icon Rendering: Font vs SVG Mask
@@ -1144,6 +1153,10 @@ function renderWidgets() {
                 const dy = me.clientY - startY;
                 el.style.left = (startLeft + dx) + 'px';
                 el.style.top = (startTop + dy) + 'px';
+
+                // Force triggering resize update even on move to give "alive" feel if requested
+                const resizeEvent = new Event('widgetResize');
+                el.dispatchEvent(resizeEvent);
             };
 
             document.onmouseup = () => {
@@ -1217,14 +1230,15 @@ function renderWidgets() {
                 const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const dateStr = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
-                // Get widget width for responsive sizing
+                // Get widget width for fluid sizing
                 const widgetWidth = parseFloat(el.style.width) || 250;
-                const isCompact = widgetWidth < 220;
-                const timeSize = isCompact ? '2rem' : '3.5rem';
-                const dateSize = isCompact ? '0.7rem' : '0.95rem';
+
+                // Fluid typography
+                const timeSize = (widgetWidth * 0.18) + 'px';
+                const dateSize = (widgetWidth * 0.06) + 'px';
 
                 contentBox.innerHTML = `
-                    <div style="font-size: ${timeSize}; font-weight: 700; background: linear-gradient(135deg, #4CC9F0, #3A86FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 2s ease-in-out infinite;">
+                    <div style="font-size: ${timeSize}; font-weight: 700; background: linear-gradient(135deg, #4CC9F0, #3A86FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 2s ease-in-out infinite; line-height: 1;">
                         ${timeStr}
                     </div>
                     <div style="font-size: ${dateSize}; opacity: 0.7; text-transform: capitalize; margin-top: 10px;">
@@ -1382,16 +1396,15 @@ function renderWidgets() {
 
                 const { temp, weatherCode, dailyData } = weatherData;
 
-                // Get widget size for responsive design
+                // Get widget size for fluid design
                 const widgetWidth = parseFloat(el.style.width) || 250;
-                const isCompact = widgetWidth < 250;
 
-                const iconSize = isCompact ? '2rem' : '3rem';
-                const tempSize = isCompact ? '1.5rem' : '2.2rem';
-                const dayFontSize = isCompact ? '0.55rem' : '0.7rem';
-                const dayIconSize = isCompact ? '1rem' : '1.3rem';
-                const dayTempSize = isCompact ? '0.7rem' : '0.85rem';
-                const marginBottom = isCompact ? '6px' : '12px';
+                const iconSize = (widgetWidth * 0.18) + 'px';
+                const tempSize = (widgetWidth * 0.14) + 'px';
+                const dayFontSize = Math.max(8, widgetWidth * 0.035) + 'px';
+                const dayIconSize = (widgetWidth * 0.06) + 'px';
+                const dayTempSize = Math.max(8, widgetWidth * 0.04) + 'px';
+                const marginBottom = (widgetWidth * 0.04) + 'px';
 
                 // Weather icons based on code
                 let icon = 'ri-sun-line';
@@ -1419,7 +1432,7 @@ function renderWidgets() {
                     const dayIcon = getWeatherIcon(dailyData.weathercode[i]);
 
                     forecastHTML += `
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 0;">
                             <div style="font-size: ${dayFontSize}; opacity: 0.6; white-space: nowrap;">${dayName}</div>
                             <i class="${dayIcon}" style="font-size: ${dayIconSize}; opacity: 0.8;"></i>
                             <div style="font-size: ${dayTempSize}; font-weight: 600;">${maxTemp}°</div>
@@ -1488,11 +1501,17 @@ function renderWidgets() {
                 const currentSymbols = w.settings.symbols.join(', ');
                 const newSymbols = prompt('Ingresa los símbolos de acciones separados por comas:\n(Ejemplo: AAPL, GOOGL, MSFT)', currentSymbols);
 
-                if (newSymbols !== null && newSymbols.trim() !== '') {
-                    // Parse and clean symbols
-                    w.settings.symbols = newSymbols.split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                if (newSymbols !== null) {
+                    if (newSymbols.trim() === '') {
+                        // Empty input -> Delete widget
+                        activeWebmix.widgets = activeWebmix.widgets.filter(wid => wid.id !== w.id);
+                        showToast("Widget de mercados eliminado", "success");
+                    } else {
+                        // Update symbols
+                        w.settings.symbols = newSymbols.split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                    }
                     saveState();
-                    renderWidgets(); // Re-render to show new symbols
+                    renderWidgets();
                 }
             };
 
@@ -1502,14 +1521,13 @@ function renderWidgets() {
 
                 // Get widget width to determine sizing
                 const widgetWidth = parseFloat(el.style.width) || 250;
-                const isCompact = widgetWidth < 220;
 
-                // Responsive font sizes
-                const symbolSize = isCompact ? '0.75rem' : '0.9rem';
-                const priceSize = isCompact ? '0.65rem' : '0.75rem';
-                const changeSize = isCompact ? '0.7rem' : '0.85rem';
-                const padding = isCompact ? '4px 6px' : '6px 8px';
-                const gap = isCompact ? '4px' : '8px';
+                // Fluid typography
+                const symbolSize = Math.max(10, widgetWidth * 0.05) + 'px';
+                const priceSize = Math.max(9, widgetWidth * 0.04) + 'px';
+                const changeSize = Math.max(9, widgetWidth * 0.045) + 'px';
+                const padding = (widgetWidth * 0.02) + 'px ' + (widgetWidth * 0.03) + 'px';
+                const gap = (widgetWidth * 0.02) + 'px';
 
                 let html = `<div style="display: flex; flex-direction: column; gap: ${gap}; width: 100%; overflow: hidden;">`;
 
