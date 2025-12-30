@@ -73,6 +73,10 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .app-card:hover {
@@ -333,26 +337,25 @@
                 category: "Productividad y Herramientas",
                 icon: "ri-briefcase-4-line",
                 apps: [
-                    { name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335' },
-                    { name: 'Outlook', url: 'https://outlook.com', icon: 'ri-mail-send-fill', color: '#0078D4' },
-                    { name: 'Drive', url: 'https://drive.google.com', icon: 'ri-hard-drive-2-fill', color: '#1FA463' },
-                    { name: 'Notion', url: 'https://notion.so', icon: 'ri-file-list-3-fill', color: '#000000' },
-                    { name: 'Trello', url: 'https://trello.com', icon: 'ri-kanban-view', color: '#0079BF' },
+                    { name: 'Gmail', url: 'https://mail.google.com', icon: 'https://cdn.simpleicons.org/gmail', color: '#EA4335' },
+                    { name: 'Drive', url: 'https://drive.google.com', icon: 'https://cdn.simpleicons.org/googledrive', color: '#1FA463' },
+                    { name: 'Notion', url: 'https://notion.so', icon: 'https://cdn.simpleicons.org/notion', color: '#000000' },
+                    { name: 'Trello', url: 'https://trello.com', icon: 'https://cdn.simpleicons.org/trello', color: '#0079BF' },
                     { name: 'Slack', url: 'https://slack.com', icon: 'ri-slack-fill', color: '#4A154B' },
-                    { name: 'Zoom', url: 'https://zoom.us', icon: 'ri-video-chat-fill', color: '#2D8CFF' },
-                    { name: 'Calendar', url: 'https://calendar.google.com', icon: 'ri-calendar-event-fill', color: '#4285F4' },
-                    { name: 'Whatsapp', url: 'https://web.whatsapp.com', icon: 'ri-whatsapp-fill', color: '#25D366' }
+                    { name: 'Zoom', url: 'https://zoom.us', icon: 'https://cdn.simpleicons.org/zoom', color: '#2D8CFF' },
+                    { name: 'Calendar', url: 'https://calendar.google.com', icon: 'logos/calendar.svg', color: '#4285F4' },
+                    { name: 'Whatsapp', url: 'https://web.whatsapp.com', icon: 'https://cdn.simpleicons.org/whatsapp', color: '#25D366' }
                 ]
             },
             {
                 category: "Streaming & TV",
                 icon: "ri-tv-line",
                 apps: [
-                    { name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914' },
-                    { name: 'HBO Max', url: 'https://www.max.com', icon: 'ri-movie-fill', color: '#5C2D91' },
-                    { name: 'Disney+', url: 'https://disneyplus.com', icon: 'ri-mv-fill', color: '#113CCF' },
-                    { name: 'Prime Video', url: 'https://primevideo.com', icon: 'ri-video-fill', color: '#00A8E1' },
-                    { name: 'Movistar+', url: 'https://ver.movistarplus.es', icon: 'ri-tv-2-fill', color: '#003670' }
+                    { name: 'Netflix', url: 'https://netflix.com', icon: 'https://cdn.simpleicons.org/netflix', color: '#E50914' },
+                    { name: 'HBO Max', url: 'https://www.max.com', icon: 'https://cdn.simpleicons.org/hbomax', color: '#5C2D91' },
+                    { name: 'Disney+', url: 'https://disneyplus.com', icon: 'logos/disneyplus.svg', color: '#113CCF' },
+                    { name: 'Prime Video', url: 'https://primevideo.com', icon: 'logos/primevideo.svg', color: '#00A8E1' },
+                    { name: 'Movistar+', url: 'https://ver.movistarplus.es', icon: 'logos/movistarplus.svg', color: '#003670' }
                 ]
             },
             {
@@ -360,9 +363,9 @@
                 icon: "ri-headphone-fill",
                 apps: [
                     { name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000' },
-                    { name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954' },
-                    { name: 'Twitch', url: 'https://twitch.tv', icon: 'ri-twitch-fill', color: '#9146FF' },
-                    { name: 'SoundCloud', url: 'https://soundcloud.com', icon: 'ri-soundcloud-fill', color: '#FF5500' }
+                    { name: 'Spotify', url: 'https://open.spotify.com', icon: 'https://cdn.simpleicons.org/spotify', color: '#1DB954' },
+                    { name: 'Twitch', url: 'https://twitch.tv', icon: 'https://cdn.simpleicons.org/twitch', color: '#9146FF' },
+                    { name: 'SoundCloud', url: 'https://soundcloud.com', icon: 'https://cdn.simpleicons.org/soundcloud', color: '#FF5500' }
                 ]
             },
             {
@@ -382,25 +385,36 @@
                 category: "Redes Sociales",
                 icon: "ri-group-line",
                 apps: [
-                    { name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000' },
-                    { name: 'Instagram', url: 'https://instagram.com', icon: 'ri-instagram-fill', color: '#E1306C' },
-                    { name: 'Facebook', url: 'https://facebook.com', icon: 'ri-facebook-fill', color: '#1877F2' },
+                    { name: 'Twitter', url: 'https://twitter.com', icon: 'https://cdn.simpleicons.org/x', color: '#000000' },
+                    { name: 'Instagram', url: 'https://instagram.com', icon: 'https://cdn.simpleicons.org/instagram', color: '#E1306C' },
+                    { name: 'Facebook', url: 'https://facebook.com', icon: 'https://cdn.simpleicons.org/facebook', color: '#1877F2' },
                     { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'ri-linkedin-fill', color: '#0077B5' },
-                    { name: 'TikTok', url: 'https://tiktok.com', icon: 'ri-video-chat-line', color: '#000000' },
-                    { name: 'Reddit', url: 'https://reddit.com', icon: 'ri-reddit-fill', color: '#FF4500' },
-                    { name: 'Discord', url: 'https://discord.com', icon: 'ri-discord-fill', color: '#5865F2' },
-                    { name: 'Pinterest', url: 'https://pinterest.com', icon: 'ri-pinterest-fill', color: '#BD081C' }
+                    { name: 'TikTok', url: 'https://tiktok.com', icon: 'https://cdn.simpleicons.org/tiktok', color: '#000000' },
+                    { name: 'Reddit', url: 'https://reddit.com', icon: 'https://cdn.simpleicons.org/reddit', color: '#FF4500' },
+                    { name: 'Discord', url: 'https://discord.com', icon: 'https://cdn.simpleicons.org/discord', color: '#5865F2' },
+                    { name: 'Pinterest', url: 'https://pinterest.com', icon: 'https://cdn.simpleicons.org/pinterest', color: '#BD081C' }
                 ]
             },
             {
                 category: "Compras",
                 icon: "ri-shopping-bag-3-line",
                 apps: [
-                    { name: 'Amazon', url: 'https://amazon.com', icon: 'ri-shopping-cart-fill', color: '#FF9900' },
-                    { name: 'AliExpress', url: 'https://aliexpress.com', icon: 'ri-shopping-bag-fill', color: '#FF4747' },
-                    { name: 'Temu', url: 'https://temu.com', icon: 'ri-shopping-basket-fill', color: '#FB7701' },
-                    { name: 'eBay', url: 'https://ebay.com', icon: 'ri-shopping-bag-3-fill', color: '#E53238' },
+                    { name: 'Amazon', url: 'https://amazon.com', icon: 'logos/amazon.svg', color: '#FF9900' },
+                    { name: 'AliExpress', url: 'https://aliexpress.com', icon: 'https://cdn.simpleicons.org/aliexpress', color: '#FF4747' },
+                    { name: 'Temu', url: 'https://temu.com', icon: 'logos/temu.svg', color: '#FB7701' },
+                    { name: 'eBay', url: 'https://ebay.com', icon: 'https://cdn.simpleicons.org/ebay', color: '#E53238' },
                     { name: 'Shein', url: 'https://shein.com', icon: 'ri-t-shirt-fill', color: '#000000' }
+                ]
+            },
+            {
+                category: "Widgets",
+                icon: "ri-layout-grid-fill",
+                apps: [
+                    { name: 'Reloj & Fecha', type: 'widget', widgetType: 'clock', icon: 'ri-time-line', color: '#4CC9F0' },
+                    { name: 'Clima', type: 'widget', widgetType: 'weather', icon: 'ri-sun-cloudy-line', color: '#FFD700' },
+                    { name: 'Mercados', type: 'widget', widgetType: 'stock', symbol: 'AAPL', icon: 'ri-stock-line', color: '#10B981' },
+                    { name: 'Notas Rápidas', type: 'widget', widgetType: 'notes', icon: 'ri-sticky-note-line', color: '#F59E0B' },
+                    { name: 'Calculadora', type: 'widget', widgetType: 'calculator', icon: 'ri-calculator-line', color: '#8B5CF6' }
                 ]
             }
         ];
@@ -475,10 +489,23 @@
                     app.category = cat.category;
                     // Safe serialization
                     const appString = encodeURIComponent(JSON.stringify(app));
+
+                    let iconHtml;
+                    if (app.icon.startsWith('http') || app.icon.includes('simpleicons')) {
+                        // External URLs from CDN - use mask
+                        iconHtml = `<div class="app-icon" style="background-color: ${app.color}; -webkit-mask: url('${app.icon}') no-repeat center / contain; mask: url('${app.icon}') no-repeat center / contain; width: 40px; height: 40px;"></div>`;
+                    } else if (app.icon.endsWith('.svg')) {
+                        // Local SVG files - use img tag
+                        iconHtml = `<div class="app-icon"><img src="${app.icon}" alt="${app.name}" style="width: 40px; height: 40px; object-fit: contain;"></div>`;
+                    } else {
+                        // RemixIcon classes
+                        iconHtml = `<div class="app-icon" style="color: ${app.color}"><i class="${app.icon}"></i></div>`;
+                    }
+
                     return `
-                            <div class="app-card" onclick="toggleApp(this, '${appString}')">
+                            <div class="app-card" onclick="toggleApp(event, '${appString}')">
                                 <div class="selection-check"><i class="ri-check-line"></i></div>
-                                <div class="app-icon" style="color: ${app.color}"><i class="${app.icon}"></i></div>
+                                ${iconHtml}
                                 <div class="app-name">${app.name}</div>
                             </div>
                             `;
@@ -490,10 +517,34 @@
             initIconSelector();
         }
 
-        window.toggleApp = function (card, appString) {
+        window.toggleApp = function (event, appString) {
+            // Prevent default behavior and stop propagation
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            // Get the card element - could be the card itself or a child
+            let card = event.target;
+            while (card && !card.classList.contains('app-card')) {
+                card = card.parentElement;
+            }
+
+            if (!card) return;
+
             const app = JSON.parse(decodeURIComponent(appString));
-            // Simple Set check by unique URL
-            const exists = [...selectedApps].find(a => a.url === app.url);
+
+            // Check if this is a widget or regular app
+            const isWidget = app.type === 'widget';
+
+            // Find existing item by URL (for apps) or widgetType (for widgets)
+            const exists = [...selectedApps].find(a => {
+                if (isWidget) {
+                    return a.type === 'widget' && a.widgetType === app.widgetType;
+                } else {
+                    return a.url === app.url;
+                }
+            });
 
             if (exists) {
                 selectedApps.delete(exists);
@@ -544,10 +595,6 @@
             selectedApps.add(customApp);
             updateUI();
             closeCustomModal();
-            // Show feedback?
-            const btn = document.getElementById('add-apps-btn');
-            btn.innerHTML = `<i class="ri-check-line"></i> Website Añadido`;
-            setTimeout(() => { btn.innerHTML = "Añadir a Gridify"; }, 1500);
         };
 
         function updateUI() {

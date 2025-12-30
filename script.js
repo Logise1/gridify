@@ -16,15 +16,16 @@ const DEFAULT_DATA = {
             rows: 6,
             cols: 8,
             background: '',
+            widgets: [],
             tiles: [
-                { id: 't-google', category: 'Productividad y Herramientas', name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4', showText: true },
-                { id: 't-gmail', category: 'Productividad y Herramientas', name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335', showText: true },
-                { id: 't-youtube', category: 'Música y Video', name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000', showText: true },
-                { id: 't-spotify', category: 'Música y Video', name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954', showText: true },
-                { id: 't-netflix', category: 'Streaming & TV', name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914', showText: true },
-                { id: 't-prime', category: 'Streaming & TV', name: 'Prime Video', url: 'https://primevideo.com', icon: 'ri-video-fill', color: '#00A8E1', showText: true },
-                { id: 't-twitter', category: 'Redes Sociales', name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000', showText: true },
-                { id: 't-chatgpt', category: 'Inteligencia Artificial', name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F', showText: true }
+                { id: 't-google', category: 'Productividad y Herramientas', name: 'Google', url: 'https://google.com', icon: 'https://cdn.simpleicons.org/google', color: '#4285F4', showText: true },
+                { id: 't-gmail', category: 'Productividad y Herramientas', name: 'Gmail', url: 'https://mail.google.com', icon: 'https://cdn.simpleicons.org/gmail', color: '#EA4335', showText: true },
+                { id: 't-youtube', category: 'Música y Video', name: 'YouTube', url: 'https://youtube.com', icon: 'https://cdn.simpleicons.org/youtube', color: '#FF0000', showText: true },
+                { id: 't-spotify', category: 'Música y Video', name: 'Spotify', url: 'https://open.spotify.com', icon: 'https://cdn.simpleicons.org/spotify', color: '#1DB954', showText: true },
+                { id: 't-netflix', category: 'Streaming & TV', name: 'Netflix', url: 'https://netflix.com', icon: 'https://cdn.simpleicons.org/netflix', color: '#E50914', showText: true },
+                { id: 't-prime', category: 'Streaming & TV', name: 'Prime Video', url: 'https://primevideo.com', icon: 'logos/primevideo.svg', color: '#00A8E1', showText: true },
+                { id: 't-twitter', category: 'Redes Sociales', name: 'Twitter', url: 'https://twitter.com', icon: 'https://cdn.simpleicons.org/x', color: '#000000', showText: true },
+                { id: 't-chatgpt', category: 'Inteligencia Artificial', name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'https://cdn.simpleicons.org/openai', color: '#10A37F', showText: true }
             ]
         }
     ],
@@ -94,18 +95,11 @@ let selectedColor = '#2b2d42';
 let selectedWebmixColor = '#4CC9F0';
 let promptCallback = null;
 let confirmCallback = null;
+let widgetIntervals = []; // For tracking widget update intervals
 
 // Initialization
-function init() {
-    loadState();
-    checkIncomingApps(); // Check apps before rendering
-    renderSidebar();
-    renderGrid();
-    setupEventListeners();
-    setupGlobalUpload();
-    setupWallpaperGallery();
-    initOnboarding();
-}
+// Initialization
+// (init moved to after loadState)
 
 function loadState() {
     const saved = localStorage.getItem('glimState');
@@ -121,11 +115,24 @@ function loadState() {
             if (!wm.cols) wm.cols = 8;
             if (!wm.icon) wm.icon = 'ri-folder-2-line';
             if (!wm.color) wm.color = '#4CC9F0';
+            if (!wm.widgets) wm.widgets = [];
         });
 
     } else {
         Object.assign(state, JSON.parse(JSON.stringify(DEFAULT_DATA)));
     }
+}
+
+function init() {
+    loadState();
+    checkIncomingApps();
+    renderSidebar();
+    renderGrid();
+    renderWidgets();
+    setupEventListeners();
+    setupGlobalUpload();
+    setupWallpaperGallery();
+    initOnboarding();
 }
 
 function saveState() {
@@ -221,8 +228,9 @@ function renderGrid() {
     const catsToRender = [...new Set([...defaultCats, ...Object.keys(categories)])];
 
     catsToRender.forEach(catName => {
+        if (catName === 'Widgets') return; // Do not render widgets in grid
         const catTiles = categories[catName] || [];
-        if (catTiles.length === 0) return; // Hide empty categories? User wants categories visible. Or maybe only if inhabited. usually only inhabited.
+        if (catTiles.length === 0) return;
 
         const groupEl = document.createElement('div');
         groupEl.className = 'category-group';
@@ -250,28 +258,89 @@ function renderGrid() {
                 "Otros": "#808080" // Gray
             };
 
-            // Theme Logic
-            let displayColor = tileData.color; // Brand
+            // Force Update Legacy Icons
+            const iconMap = {
+                // Streaming
+                'Netflix': 'https://cdn.simpleicons.org/netflix',
+                'HBO Max': 'https://cdn.simpleicons.org/hbomax',
+                'Disney+': 'logos/disneyplus.svg',
+                'Prime Video': 'logos/primevideo.svg',
+                'Movistar+': 'logos/movistarplus.svg',
+                // Productivity / Google
+                'Google': 'https://cdn.simpleicons.org/google',
+                'Gmail': 'https://cdn.simpleicons.org/gmail',
+                'Google Drive': 'https://cdn.simpleicons.org/googledrive',
+                'Google Calendar': 'logos/calendar.svg', // Local
+                'Calendar': 'logos/calendar.svg', // Local
+                'Google Docs': 'https://cdn.simpleicons.org/googledocs',
+                'Slack': 'ri-slack-fill',
+                'Trello': 'https://cdn.simpleicons.org/trello',
+                'Notion': 'https://cdn.simpleicons.org/notion',
+                'Zoom': 'https://cdn.simpleicons.org/zoom',
+                'Microsoft Teams': 'https://cdn.simpleicons.org/microsoftteams',
+                // Social
+                'Whatsapp': 'https://cdn.simpleicons.org/whatsapp',
+                'WhatsApp': 'https://cdn.simpleicons.org/whatsapp',
+                'Instagram': 'https://cdn.simpleicons.org/instagram',
+                'Facebook': 'https://cdn.simpleicons.org/facebook',
+                'Twitter': 'https://cdn.simpleicons.org/x',
+                'X': 'https://cdn.simpleicons.org/x',
+                'LinkedIn': 'ri-linkedin-fill', // Reverted
+                'Discord': 'https://cdn.simpleicons.org/discord',
+                'Reddit': 'https://cdn.simpleicons.org/reddit',
+                'TikTok': 'https://cdn.simpleicons.org/tiktok',
+                'Pinterest': 'https://cdn.simpleicons.org/pinterest',
+                'Telegram': 'https://cdn.simpleicons.org/telegram',
+                // Music
+                'Spotify': 'https://cdn.simpleicons.org/spotify',
+                'SoundCloud': 'https://cdn.simpleicons.org/soundcloud',
+                'Twitch': 'https://cdn.simpleicons.org/twitch',
+                // Shopping
+                'Amazon': 'logos/amazon.svg', // Local
+                'AliExpress': 'https://cdn.simpleicons.org/aliexpress',
+                'eBay': 'https://cdn.simpleicons.org/ebay',
+                'Temu': 'logos/temu.svg' // Local
+            };
+            if (iconMap[tileData.name] && !tileData.icon.startsWith('http') && !tileData.icon.startsWith('logos/')) {
+                tileData.icon = iconMap[tileData.name];
+            }
+            // Also force update if it WAS a bad URL previously (e.g. 404 cdn)
+            // Logic: if mapped, just overwrite to be safe?
+            // "he metido esto" implies they want the local file used.
+            if (iconMap[tileData.name]) {
+                tileData.icon = iconMap[tileData.name];
+            }
 
-            // 1. Force Category Color (Requested behavior: "Apps de la categoria sea todos el mismo")
-            // This becomes the new "Original/Default" look.
+            // Theme Logic
+            let displayColor = tileData.color || '#fff'; // Default
+
+            // 1. Force Category Color (Restored)
             if (tileData.category && categoryColors[tileData.category]) {
                 displayColor = categoryColors[tileData.category];
             }
 
-            // 2. Override if a specific GLOBAL MONO theme is set (e.g. "White", "Purple")
-            // If themeColor is 'original' or null, we keep the Category Color set above.
+            // 2. Override if a specific GLOBAL MONO theme is set
             if (state.settings.themeColor && state.settings.themeColor !== 'original') {
                 displayColor = state.settings.themeColor;
             }
 
-            // Calculate Background: "Tonos del fondo" (Glass tint of the displayColor)
-            let rgbaBg = hexToRgba(displayColor, 0.2); // Saturated glass
+            // Calculate Background: "Tonos del fondo"
+            // Outlook should be more visible (higher opacity)
+            let bgOpacity = (tileData.name === 'Outlook') ? 0.35 : 0.2;
+            let rgbaBg = hexToRgba(displayColor, bgOpacity);
             tileEl.style.borderColor = hexToRgba(displayColor, 0.3);
             tileEl.style.backgroundColor = rgbaBg;
 
-            tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}" style="color: ${displayColor}"></i></div>`;
-            tileEl.title = tileData.name; // Tooltip since name is hidden
+            // Icon Rendering: Font vs SVG Mask
+            // Special handling for Outlook (transparent logo)
+            if (tileData.name === 'Outlook' && tileData.icon === 'logos/outlook.svg') {
+                tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${tileData.icon}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+            } else if (tileData.icon.startsWith('http') || tileData.icon.includes('simpleicons') || tileData.icon.startsWith('logos/')) {
+                tileEl.innerHTML = `<div class="tile-icon" style="background-color: ${displayColor}; -webkit-mask: url('${tileData.icon}') no-repeat center / contain; mask: url('${tileData.icon}') no-repeat center / contain; width: 48px; height: 48px;"></div>`;
+            } else {
+                tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}" style="color: ${displayColor}"></i></div>`;
+            }
+            tileEl.title = tileData.name;
 
             tileEl.onclick = (e) => window.open(tileData.url, '_blank');
             tileEl.oncontextmenu = (e) => {
@@ -330,6 +399,7 @@ function switchWebmix(id) {
     state.activeWebmixId = id;
     renderSidebar();
     renderGrid();
+    renderWidgets(); // Update widgets when switching webmix
     saveState();
 }
 
@@ -681,7 +751,52 @@ function setupEventListeners() {
     confirmYesBtn.onclick = () => { if (confirmCallback) confirmCallback(); closeEditModal(); };
 
     const searchInput = document.getElementById('main-search');
-    const doSearch = () => { if (searchInput.value) window.open(`https://www.google.com/search?q=${encodeURIComponent(searchInput.value)}`, '_blank'); };
+    const calcResult = document.getElementById('calc-result');
+
+    // Inline calculator in search bar
+    const evaluateExpression = (expr) => {
+        try {
+            // Only allow numbers, operators, parentheses, spaces, and decimal points
+            if (!/^[\d+\-*/().\s]+$/.test(expr)) return null;
+
+            // Use Function constructor as safer eval alternative
+            const result = Function('"use strict"; return (' + expr + ')')();
+
+            if (typeof result === 'number' && !isNaN(result)) {
+                return result;
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    searchInput.oninput = () => {
+        const value = searchInput.value.trim();
+        const result = evaluateExpression(value);
+
+        if (result !== null) {
+            calcResult.textContent = `= ${result}`;
+            calcResult.style.opacity = '1';
+        } else {
+            calcResult.textContent = '';
+            calcResult.style.opacity = '0';
+        }
+    };
+
+    const doSearch = () => {
+        if (searchInput.value) {
+            // If it's a calculation, just clear the input
+            const result = evaluateExpression(searchInput.value.trim());
+            if (result !== null) {
+                searchInput.value = result.toString();
+                calcResult.textContent = '';
+            } else {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(searchInput.value)}`, '_blank');
+            }
+        }
+    };
+
     document.querySelector('.search-btn').onclick = doSearch;
     searchInput.onkeypress = (e) => { if (e.key === 'Enter') doSearch(); };
 
@@ -841,24 +956,45 @@ function checkIncomingApps() {
                 // Standard logic: fill holes starting from pos.
 
                 newApps.forEach(p => {
-                    while (activeWebmix.tiles.some(t => t.position === pos)) {
-                        pos++;
-                    }
+                    // Check if this is a widget
+                    if (p.type === 'widget') {
+                        // Add to widgets
+                        if (!activeWebmix.widgets) activeWebmix.widgets = [];
 
-                    activeWebmix.tiles.push({
-                        id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-                        position: pos++,
-                        name: p.name,
-                        url: p.url,
-                        icon: p.icon,
-                        color: p.color,
-                        showText: true,
-                        category: p.category // Preservation of category
-                    });
+                        const widgetId = 'widget-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                        activeWebmix.widgets.push({
+                            id: widgetId,
+                            type: p.widgetType,
+                            x: 100 + (activeWebmix.widgets.length * 30),
+                            y: 150 + (activeWebmix.widgets.length * 30),
+                            width: 250,
+                            height: 200,
+                            settings: {
+                                symbol: p.symbol || 'AAPL'
+                            }
+                        });
+                    } else {
+                        // Add as regular tile
+                        while (activeWebmix.tiles.some(t => t.position === pos)) {
+                            pos++;
+                        }
+
+                        activeWebmix.tiles.push({
+                            id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                            position: pos++,
+                            name: p.name,
+                            url: p.url,
+                            icon: p.icon,
+                            color: p.color,
+                            showText: true,
+                            category: p.category // Preservation of category
+                        });
+                    }
                 });
 
                 saveState();
                 renderGrid(); // explicit re-render
+                renderWidgets(); // Also render widgets!
                 showToast(`${newApps.length} apps added from Catalog!`, 'success');
             }
         } catch (e) { console.error("Error processing new apps", e); }
@@ -876,6 +1012,7 @@ function checkIncomingApps() {
 function handleOnboardingFinish() {
     const modal = document.getElementById('onboarding-modal');
     const activeWebmix = getActiveWebmix();
+    if (!activeWebmix.widgets) activeWebmix.widgets = [];
 
     // Build new tiles list
     const newTiles = [];
@@ -951,4 +1088,391 @@ function drop(e, targetPosition) {
 }
 
 // Start the app
+// WIDGETS SYSTEM
+
+function renderWidgets() {
+    console.log("DEBUG: renderWidgets called");
+    // 1. Setup Layer
+    let layer = document.getElementById('widget-layer');
+    if (!layer) {
+        console.log("DEBUG: Creating widget-layer");
+        layer = document.createElement('div');
+        layer.id = 'widget-layer';
+        document.body.appendChild(layer);
+    }
+    layer.innerHTML = '';
+
+    // Clear old intervals
+    widgetIntervals.forEach(clearInterval);
+    widgetIntervals = [];
+
+    const activeWebmix = getActiveWebmix();
+    console.log('DEBUG: Active WM', activeWebmix ? activeWebmix.id : 'None');
+    console.log('DEBUG: Widgets list', activeWebmix ? activeWebmix.widgets : 'N/A');
+
+    if (!activeWebmix || !activeWebmix.widgets) return;
+
+    activeWebmix.widgets.forEach(w => {
+        const el = document.createElement('div');
+        el.className = 'widget-box';
+        el.id = w.id;
+        el.style.left = w.x + 'px';
+        el.style.top = w.y + 'px';
+        el.style.width = w.width + 'px';
+        el.style.height = w.height + 'px';
+
+        // Initial Content
+        el.innerHTML = `
+            <div class="widget-header">
+                ${w.type}
+            </div>
+            <div class="widget-content" id="content-${w.id}">Loading...</div>
+            <div class="widget-resize-handle"></div>
+        `;
+
+        // Drag Logic
+        const headerDrag = el.querySelector('.widget-header');
+        headerDrag.onmousedown = (e) => {
+            e.preventDefault();
+            let startX = e.clientX;
+            let startY = e.clientY;
+            let startLeft = parseFloat(el.style.left) || 0;
+            let startTop = parseFloat(el.style.top) || 0;
+
+            document.onmousemove = (me) => {
+                const dx = me.clientX - startX;
+                const dy = me.clientY - startY;
+                el.style.left = (startLeft + dx) + 'px';
+                el.style.top = (startTop + dy) + 'px';
+            };
+
+            document.onmouseup = () => {
+                document.onmousemove = null;
+                document.onmouseup = null;
+                // Save
+                w.x = parseFloat(el.style.left);
+                w.y = parseFloat(el.style.top);
+                saveState();
+            };
+        }
+
+        // Resize Logic
+        const resizer = el.querySelector('.widget-resize-handle');
+        resizer.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Stop drag from header if overlapping
+            let startX = e.clientX;
+            let startY = e.clientY;
+            let startWidth = parseFloat(getComputedStyle(el).width);
+            let startHeight = parseFloat(getComputedStyle(el).height);
+
+            document.onmousemove = (me) => {
+                const dx = me.clientX - startX;
+                const dy = me.clientY - startY;
+                el.style.width = (startWidth + dx) + 'px';
+                el.style.height = (startHeight + dy) + 'px';
+
+                // Trigger resize event for content adjustment
+                const resizeEvent = new Event('widgetResize');
+                el.dispatchEvent(resizeEvent);
+            };
+
+            document.onmouseup = () => {
+                document.onmousemove = null;
+                document.onmouseup = null;
+                w.width = parseFloat(el.style.width);
+                w.height = parseFloat(el.style.height);
+                saveState();
+
+                // Final resize event
+                const resizeEvent = new Event('widgetResize');
+                el.dispatchEvent(resizeEvent);
+            };
+        };
+
+        // Context Menu (Delete)
+        el.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent grid context mnu
+            // Native confirm for simplicity or use custom
+            if (confirm("Borrar Widget?")) {
+                activeWebmix.widgets = activeWebmix.widgets.filter(wid => wid.id !== w.id);
+                saveState();
+                renderWidgets();
+            }
+        };
+
+        layer.appendChild(el);
+
+        // Populate Content - PREMIUM VERSIONS
+        const contentBox = el.querySelector('.widget-content');
+        const header = el.querySelector('.widget-header');
+
+        // === CLOCK WIDGET ===
+        if (w.type === 'clock') {
+            header.innerHTML = `<i class="ri-time-line" style="margin-right: 5px;"></i> Reloj & Fecha`;
+
+            const update = () => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const dateStr = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+                contentBox.innerHTML = `
+                    <div style="font-size: 3.5rem; font-weight: 700; background: linear-gradient(135deg, #4CC9F0, #3A86FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: pulse 2s ease-in-out infinite;">
+                        ${timeStr}
+                    </div>
+                    <div style="font-size: 0.95rem; opacity: 0.7; text-transform: capitalize; margin-top: 10px;">
+                        ${dateStr}
+                    </div>
+                `;
+            };
+            update();
+            widgetIntervals.push(setInterval(update, 1000));
+        }
+
+        // === WEATHER WIDGET ===
+        if (w.type === 'weather') {
+            header.innerHTML = `<i class="ri-sun-cloudy-line" style="margin-right: 5px;"></i> Clima`;
+            contentBox.innerHTML = `<i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>`;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const { latitude, longitude } = pos.coords;
+                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`)
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d.current_weather && d.daily) {
+                                const temp = Math.round(d.current_weather.temperature);
+                                const weatherCode = d.current_weather.weathercode;
+
+                                // Weather icons based on code
+                                let icon = 'ri-sun-line';
+                                let gradient = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                                if (weatherCode > 50 && weatherCode < 70) { icon = 'ri-rainy-line'; gradient = 'linear-gradient(135deg, #4CC9F0, #3A86FF)'; }
+                                else if (weatherCode > 70) { icon = 'ri-snowy-line'; gradient = 'linear-gradient(135deg, #E0E0E0, #4CC9F0)'; }
+                                else if (weatherCode > 0) { icon = 'ri-cloudy-line'; gradient = 'linear-gradient(135deg, #A0A0A0, #606060)'; }
+
+
+                                // Forecast for 7 days horizontal
+                                const today = new Date();
+                                const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                                const getWeatherIcon = (code) => {
+                                    if (code > 70) return 'ri-snowy-line';
+                                    if (code > 50) return 'ri-rainy-line';
+                                    if (code > 0) return 'ri-cloudy-line';
+                                    return 'ri-sun-line';
+                                };
+                                let forecastHTML = '';
+
+                                for (let i = 0; i < 7; i++) {
+                                    const futureDate = new Date(today);
+                                    futureDate.setDate(today.getDate() + i);
+                                    const dayName = i === 0 ? 'Hoy' : days[futureDate.getDay()];
+                                    const maxTemp = Math.round(d.daily.temperature_2m_max[i]);
+                                    const dayIcon = getWeatherIcon(d.daily.weathercode[i]);
+
+                                    forecastHTML += `
+                                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0;">
+                                            <div style="font-size: 0.7rem; opacity: 0.6; white-space: nowrap;">${dayName}</div>
+                                            <i class="${dayIcon}" style="font-size: 1.3rem; opacity: 0.8;"></i>
+                                            <div style="font-size: 0.85rem; font-weight: 600;">${maxTemp}°</div>
+                                        </div>
+                                    `;
+                                }
+
+                                contentBox.innerHTML = `
+                                    <div style="text-align: center; margin-bottom: 12px;">
+                                        <i class="${icon}" style="font-size: 3rem; background: ${gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
+                                        <div style="font-size: 2.2rem; font-weight: 700; margin-top: 4px;">
+                                            ${temp}°C
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px; justify-content: space-between;">
+                                        ${forecastHTML}
+                                    </div>
+                                `;
+                            } else {
+                                contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ No disponible</div>`;
+                            }
+                        })
+                        .catch(() => contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ Error de conexión</div>`);
+                }, () => {
+                    contentBox.innerHTML = `<div style="opacity: 0.7; text-align: center; padding: 20px;">📍 Se requiere permiso de ubicación</div>`;
+                });
+            } else {
+                contentBox.innerHTML = `<div style="opacity: 0.5;">Geolocalización no soportada</div>`;
+            }
+        }
+
+        // === STOCK/MARKETS WIDGET ===
+        if (w.type === 'stock') {
+            header.innerHTML = `<i class="ri-stock-line" style="margin-right: 5px;"></i> Mercados`;
+            contentBox.innerHTML = `<i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>`;
+
+            const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA'];
+
+            // Fetch all stocks
+            Promise.all(symbols.map(symbol =>
+                fetch(`https://finances.logise1123.workers.dev/history?symbol=${symbol}`)
+                    .then(r => r.json())
+                    .catch(() => null)
+            )).then(results => {
+                let html = '<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">';
+
+                results.forEach((data, index) => {
+                    if (data && data.results && data.results[symbols[index]]) {
+                        const stockData = data.results[symbols[index]];
+                        const timeSeries = stockData["Time Series"];
+                        const dates = Object.keys(timeSeries).sort((a, b) => new Date(b) - new Date(a));
+
+                        if (dates.length >= 2) {
+                            const latest = timeSeries[dates[0]];
+                            const previous = timeSeries[dates[1]];
+                            const price = latest["4. close"];
+                            const prevPrice = previous["4. close"];
+                            const change = ((price - prevPrice) / prevPrice * 100);
+                            const isPositive = change >= 0;
+                            const color = isPositive ? '#10B981' : '#EF4444';
+                            const arrow = isPositive ? '▲' : '▼';
+
+                            html += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${color};">
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <div style="font-weight: 700; font-size: 0.9rem;">${symbols[index]}</div>
+                                        <div style="font-size: 0.75rem; opacity: 0.6;">$${parseFloat(price).toFixed(2)}</div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 4px; color: ${color}; font-weight: 600; font-size: 0.85rem;">
+                                        <span>${arrow}</span>
+                                        <span>${Math.abs(change).toFixed(2)}%</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+
+                html += '</div>';
+                contentBox.innerHTML = html;
+            }).catch(() => {
+                contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ Error de API</div>`;
+            });
+        }
+
+
+        // === CALCULATOR WIDGET ===
+        if (w.type === 'calculator') {
+            header.innerHTML = `<i class="ri-calculator-line" style="margin-right: 5px;"></i> Calculadora`;
+
+            let display = '0';
+            let operation = null;
+            let previousValue = null;
+
+            const updateDisplay = () => {
+                const displayEl = contentBox.querySelector('.calc-display');
+                if (displayEl) displayEl.textContent = display;
+            };
+
+            contentBox.innerHTML = `
+                <div class="calc-display" style="font-size: 2rem; font-weight: 700; padding: 10px; background: rgba(139, 92, 246, 0.2); border-radius: 8px; text-align: right; margin-bottom: 10px; min-height: 50px; display: flex; align-items: center; justify-content: flex-end;">
+                    ${display}
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <button class="calc-btn" data-value="7">7</button>
+                    <button class="calc-btn" data-value="8">8</button>
+                    <button class="calc-btn" data-value="9">9</button>
+                    <button class="calc-btn calc-op" data-value="/">÷</button>
+                    <button class="calc-btn" data-value="4">4</button>
+                    <button class="calc-btn" data-value="5">5</button>
+                    <button class="calc-btn" data-value="6">6</button>
+                    <button class="calc-btn calc-op" data-value="*">×</button>
+                    <button class="calc-btn" data-value="1">1</button>
+                    <button class="calc-btn" data-value="2">2</button>
+                    <button class="calc-btn" data-value="3">3</button>
+                    <button class="calc-btn calc-op" data-value="-">−</button>
+                    <button class="calc-btn" data-value="0">0</button>
+                    <button class="calc-btn" data-value=".">.</button>
+                    <button class="calc-btn calc-op" data-value="=">=</button>
+                    <button class="calc-btn calc-op" data-value="+">+</button>
+                </div>
+                <button class="calc-btn" data-value="C" style="margin-top: 8px; width: 100%; background: rgba(239, 68, 68, 0.3);">C</button>
+            `;
+
+            contentBox.querySelectorAll('.calc-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const val = btn.dataset.value;
+
+                    if (val === 'C') {
+                        display = '0';
+                        operation = null;
+                        previousValue = null;
+                    } else if (['+', '-', '*', '/'].includes(val)) {
+                        previousValue = parseFloat(display);
+                        operation = val;
+                        display = '0';
+                    } else if (val === '=') {
+                        if (operation && previousValue !== null) {
+                            const current = parseFloat(display);
+                            switch (operation) {
+                                case '+': display = (previousValue + current).toString(); break;
+                                case '-': display = (previousValue - current).toString(); break;
+                                case '*': display = (previousValue * current).toString(); break;
+                                case '/': display = current !== 0 ? (previousValue / current).toString() : 'Error'; break;
+                            }
+                            operation = null;
+                            previousValue = null;
+                        }
+                    } else {
+                        if (display === '0' && val !== '.') display = val;
+                        else display += val;
+                    }
+
+                    updateDisplay();
+                };
+            });
+        }
+
+        // === NOTES WIDGET ===
+        if (w.type === 'notes') {
+            header.innerHTML = `<i class="ri-sticky-note-line" style="margin-right: 5px;"></i> Notas Rápidas`;
+
+            const savedNotes = w.settings.notes || '';
+
+            contentBox.innerHTML = `
+                <textarea 
+                    id="notes-${w.id}"
+                    placeholder="Escribe aquí tus notas..."
+                    style="
+                        background: rgba(245, 158, 11, 0.1);
+                        border: 1px solid rgba(245, 158, 11, 0.3);
+                        border-radius: 8px;
+                        color: white;
+                        width: 100%;
+                        height: 100%;
+                        resize: none;
+                        padding: 12px;
+                        font-size: 0.95rem;
+                        line-height: 1.5;
+                        font-family: 'Outfit', sans-serif;
+                        outline: none;
+                    "
+                >${savedNotes}</textarea>
+            `;
+
+            setTimeout(() => {
+                const textarea = document.getElementById(`notes-${w.id}`);
+                if (textarea) {
+                    textarea.onclick = (e) => e.stopPropagation();
+                    textarea.onchange = () => {
+                        w.settings.notes = textarea.value;
+                        saveState();
+                    };
+                }
+            }, 100);
+        }
+    }); // End foreach
+}
+
+// Drag & Drop / Init
+// ... (Make sure these run)
 init();
