@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Catalog - Gridify</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            overflow-y: auto;
+            /* Allow scrolling */
+        }
+
+        .catalog-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .catalog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .catalog-title h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, #a0a0a0);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .catalog-title p {
+            color: var(--text-secondary);
+        }
+
+        .category-section {
+            margin-bottom: 50px;
+        }
+
+        .category-title {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 20px;
+        }
+
+        .app-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .app-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .app-card.selected {
+            background: rgba(76, 201, 240, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(76, 201, 240, 0.2);
+        }
+
+        .app-icon {
+            font-size: 2.5rem;
+            color: #fff;
+        }
+
+        .app-name {
+            font-weight: 500;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .selection-check {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-color);
+            color: #1A1A2E;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.2s;
+        }
+
+        .app-card.selected .selection-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .fab-bar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+
+        .fab-bar.hidden {
+            transform: translate(-50%, 150%);
+        }
+
+        .selection-count {
+            background: var(--accent-color);
+            color: #1A1A2E;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="catalog-container">
+        <div class="catalog-header">
+            <div class="catalog-title">
+                <h1>App Catalog</h1>
+                <p>Descubre y añade las mejores aplicaciones para tu dashboard.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="window.location.href='index.html'">
+                <i class="ri-close-line"></i> Esc
+            </button>
+        </div>
+
+        <!-- Categories will be injected here -->
+        <div id="catalog-content"></div>
+    </div>
+
+    <div class="fab-bar hidden" id="action-bar">
+        <span style="color:white;"><span class="selection-count" id="count-badge">0</span> Apps seleccionadas</span>
+        <button class="btn btn-primary" id="add-apps-btn">Añadir a Gridify</button>
+    </div>
+
+    <script>
+        // Data
+        const catalogData = [
+            {
+                category: "Productividad y Herramientas",
+                icon: "ri-briefcase-4-line",
+                apps: [
+                    { name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335' },
+                    { name: 'Outlook', url: 'https://outlook.com', icon: 'ri-mail-send-fill', color: '#0078D4' },
+                    { name: 'Drive', url: 'https://drive.google.com', icon: 'ri-hard-drive-2-fill', color: '#1FA463' },
+                    { name: 'Notion', url: 'https://notion.so', icon: 'ri-file-list-3-fill', color: '#000000' },
+                    { name: 'Trello', url: 'https://trello.com', icon: 'ri-kanban-view', color: '#0079BF' },
+                    { name: 'Slack', url: 'https://slack.com', icon: 'ri-slack-fill', color: '#4A154B' },
+                    { name: 'Zoom', url: 'https://zoom.us', icon: 'ri-video-chat-fill', color: '#2D8CFF' },
+                    { name: 'Calendar', url: 'https://calendar.google.com', icon: 'ri-calendar-event-fill', color: '#4285F4' },
+                    { name: 'Whatsapp', url: 'https://web.whatsapp.com', icon: 'ri-whatsapp-fill', color: '#25D366' }
+                ]
+            },
+            {
+                category: "Streaming & TV",
+                icon: "ri-tv-line",
+                apps: [
+                    { name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914' },
+                    { name: 'HBO Max', url: 'https://www.max.com', icon: 'ri-movie-fill', color: '#5C2D91' },
+                    { name: 'Disney+', url: 'https://disneyplus.com', icon: 'ri-mv-fill', color: '#113CCF' },
+                    { name: 'Prime Video', url: 'https://primevideo.com', icon: 'ri-video-fill', color: '#00A8E1' },
+                    { name: 'Movistar+', url: 'https://ver.movistarplus.es', icon: 'ri-tv-2-fill', color: '#003670' }
+                ]
+            },
+            {
+                category: "Música y Video",
+                icon: "ri-headphone-fill",
+                apps: [
+                    { name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000' },
+                    { name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954' },
+                    { name: 'Twitch', url: 'https://twitch.tv', icon: 'ri-twitch-fill', color: '#9146FF' },
+                    { name: 'SoundCloud', url: 'https://soundcloud.com', icon: 'ri-soundcloud-fill', color: '#FF5500' }
+                ]
+            },
+            {
+                category: "Inteligencia Artificial",
+                icon: "ri-brain-line",
+                apps: [
+                    { name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F' },
+                    { name: 'Gemini', url: 'https://gemini.google.com', icon: 'ri-gemini-fill', color: '#4285F4' },
+                    { name: 'Copilot', url: 'https://copilot.microsoft.com', icon: 'ri-microsoft-fill', color: '#0078D4' },
+                    { name: 'Claude', url: 'https://claude.ai', icon: 'ri-robot-fill', color: '#D97757' },
+                    { name: 'Midjourney', url: 'https://www.midjourney.com', icon: 'ri-image-2-fill', color: '#FFFFFF' },
+                    { name: 'HuggingFace', url: 'https://huggingface.co', icon: 'ri-emoji-sticker-fill', color: '#FFD21E' },
+                    { name: 'Perplexity', url: 'https://www.perplexity.ai', icon: 'ri-search-line', color: '#23B6D8' }
+                ]
+            },
+            {
+                category: "Redes Sociales",
+                icon: "ri-group-line",
+                apps: [
+                    { name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000' },
+                    { name: 'Instagram', url: 'https://instagram.com', icon: 'ri-instagram-fill', color: '#E1306C' },
+                    { name: 'Facebook', url: 'https://facebook.com', icon: 'ri-facebook-fill', color: '#1877F2' },
+                    { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'ri-linkedin-fill', color: '#0077B5' },
+                    { name: 'TikTok', url: 'https://tiktok.com', icon: 'ri-video-chat-line', color: '#000000' },
+                    { name: 'Reddit', url: 'https://reddit.com', icon: 'ri-reddit-fill', color: '#FF4500' },
+                    { name: 'Discord', url: 'https://discord.com', icon: 'ri-discord-fill', color: '#5865F2' },
+                    { name: 'Pinterest', url: 'https://pinterest.com', icon: 'ri-pinterest-fill', color: '#BD081C' }
+                ]
+            },
+            {
+                category: "Compras",
+                icon: "ri-shopping-bag-3-line",
+                apps: [
+                    { name: 'Amazon', url: 'https://amazon.com', icon: 'ri-shopping-cart-fill', color: '#FF9900' },
+                    { name: 'AliExpress', url: 'https://aliexpress.com', icon: 'ri-shopping-bag-fill', color: '#FF4747' },
+                    { name: 'Temu', url: 'https://temu.com', icon: 'ri-shopping-basket-fill', color: '#FB7701' },
+                    { name: 'eBay', url: 'https://ebay.com', icon: 'ri-shopping-bag-3-fill', color: '#E53238' },
+                    { name: 'Shein', url: 'https://shein.com', icon: 'ri-t-shirt-fill', color: '#000000' }
+                ]
+            }
+        ];
+
+
+        const content = document.getElementById('catalog-content');
+        const actionBar = document.getElementById('action-bar');
+        const badge = document.getElementById('count-badge');
+        let selectedApps = new Set();
+
+        // Check Onboarding Mode
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOnboarding = urlParams.get('onboarding') === 'true';
+
+        if (isOnboarding) {
+            document.querySelector('.catalog-title h1').textContent = "Bienvenido a Gridify";
+            document.querySelector('.catalog-title p').textContent = "Selecciona tus aplicaciones favoritas para comenzar.";
+        }
+
+        function render() {
+            // Add Custom App Section at top
+            const customSection = document.createElement('div');
+            customSection.className = 'category-section';
+            customSection.innerHTML = `
+                 <div class="category-title"><i class="ri-global-line"></i> Personalizado</div>
+                 <div class="apps-grid">
+                    <div class="app-card" onclick="addCustomApp()">
+                        <div class="app-icon" style="color: #fff"><i class="ri-add-line"></i></div>
+                        <div class="app-name">Añadir Website</div>
+                    </div>
+                 </div>
+            `;
+            content.appendChild(customSection);
+
+            catalogData.forEach(cat => {
+                const section = document.createElement('div');
+                section.className = 'category-section';
+
+                section.innerHTML = `
+                    <div class="category-title">
+                        <i class="${cat.icon}"></i> ${cat.category}
+                    </div>
+                    <div class="apps-grid">
+                        ${cat.apps.map(app => {
+                    // Inject category
+                    app.category = cat.category;
+                    // Safe serialization
+                    const appString = encodeURIComponent(JSON.stringify(app));
+                    return `
+                            <div class="app-card" onclick="toggleApp(this, '${appString}')">
+                                <div class="selection-check"><i class="ri-check-line"></i></div>
+                                <div class="app-icon" style="color: ${app.color}"><i class="${app.icon}"></i></div>
+                                <div class="app-name">${app.name}</div>
+                            </div>
+                            `;
+                }).join('')}
+                    </div>
+                `;
+                content.appendChild(section);
+            });
+        }
+
+        window.toggleApp = function (card, appString) {
+            const app = JSON.parse(decodeURIComponent(appString));
+            // Simple Set check by unique URL
+            const exists = [...selectedApps].find(a => a.url === app.url);
+
+            if (exists) {
+                selectedApps.delete(exists);
+                card.classList.remove('selected');
+            } else {
+                selectedApps.add(app);
+                card.classList.add('selected');
+            }
+
+            updateUI();
+        };
+
+        window.addCustomApp = function () {
+            const url = prompt("Introduce la URL del sitio web (ej: https://miweb.com):");
+            if (url) {
+                let name = prompt("Nombre del sitio:");
+                if (!name) name = new URL(url).hostname;
+
+                const customApp = {
+                    name: name,
+                    url: url.startsWith('http') ? url : 'https://' + url,
+                    icon: 'ri-global-line',
+                    color: '#ffffff',
+                    category: 'Otros'
+                };
+
+                // Add directly to selection
+                selectedApps.add(customApp);
+                updateUI();
+                alert(`"${name}" añadido a la selección.`);
+            }
+        };
+
+        function updateUI() {
+            const count = selectedApps.size;
+            badge.textContent = count;
+            if (count > 0) {
+                actionBar.classList.remove('hidden');
+            } else {
+                actionBar.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('add-apps-btn').onclick = () => {
+            const appsToAdd = [...selectedApps];
+            localStorage.setItem('glim_new_apps', JSON.stringify(appsToAdd));
+            window.location.href = 'index.html';
+        };
+
+        // Escape key listener
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.location.href = 'index.html';
+            }
+        });
+
+        render();
+    </script>
+</body>
+
+</html>

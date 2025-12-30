@@ -17,26 +17,14 @@ const DEFAULT_DATA = {
             cols: 8,
             background: '',
             tiles: [
-                { id: 't-google', position: 10, name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4', showText: true },
-                { id: 't-youtube', position: 11, name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000', showText: true },
-                { id: 't-gmail', position: 12, name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335', showText: true },
-                { id: 't-twitter', position: 13, name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000', showText: true },
-                { id: 't-insta', position: 18, name: 'Instagram', url: 'https://instagram.com', icon: 'ri-instagram-fill', color: '#E1306C', showText: true },
-                { id: 't-facebook', position: 19, name: 'Facebook', url: 'https://facebook.com', icon: 'ri-facebook-fill', color: '#1877F2', showText: true },
-                { id: 't-amazon', position: 20, name: 'Amazon', url: 'https://amazon.com', icon: 'ri-shopping-cart-fill', color: '#FF9900', showText: true },
-                { id: 't-netflix', position: 21, name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914', showText: true }
-            ]
-        },
-        {
-            id: 'wm-news',
-            name: 'News & Tech',
-            icon: 'ri-article-line',
-            color: '#06d6a0',
-            rows: 6,
-            cols: 9,
-            background: '',
-            tiles: [
-                { id: 't-techcrunch', position: 0, name: 'TechCrunch', url: 'https://techcrunch.com', icon: 'ri-article-line', color: '#00A562', showText: true }
+                { id: 't-google', category: 'Productividad y Herramientas', name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4', showText: true },
+                { id: 't-gmail', category: 'Productividad y Herramientas', name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335', showText: true },
+                { id: 't-youtube', category: 'Música y Video', name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000', showText: true },
+                { id: 't-spotify', category: 'Música y Video', name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954', showText: true },
+                { id: 't-netflix', category: 'Streaming & TV', name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914', showText: true },
+                { id: 't-prime', category: 'Streaming & TV', name: 'Prime Video', url: 'https://primevideo.com', icon: 'ri-video-fill', color: '#00A8E1', showText: true },
+                { id: 't-twitter', category: 'Redes Sociales', name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000', showText: true },
+                { id: 't-chatgpt', category: 'Inteligencia Artificial', name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F', showText: true }
             ]
         }
     ],
@@ -110,14 +98,13 @@ let confirmCallback = null;
 // Initialization
 function init() {
     loadState();
+    checkIncomingApps(); // Check apps before rendering
     renderSidebar();
     renderGrid();
     setupEventListeners();
     setupGlobalUpload();
     setupWallpaperGallery();
     initOnboarding();
-    setupGlobalUpload();
-    setupWallpaperGallery();
 }
 
 function loadState() {
@@ -197,60 +184,98 @@ function renderSidebar() {
     });
 }
 
+// Rendering Categories
 function renderGrid() {
     gridContainer.innerHTML = '';
     const activeWebmix = getActiveWebmix();
     if (!activeWebmix) return;
 
-    // Apply Webmix Specific Background or Global Fallback
+    // Background
     const bg = activeWebmix.background || state.settings.backgroundImage || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop";
     backgroundOverlay.style.backgroundImage = `url('${bg}')`;
 
-    // Dynamic Grid Config
-    const rows = activeWebmix.rows || 6;
-    const cols = activeWebmix.cols || 8;
+    // Group tiles by category
+    const tiles = activeWebmix.tiles;
+    const categories = {};
 
-    gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    gridContainer.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    // Default categories if missing in data
+    const defaultCats = ["Productividad y Herramientas", "Streaming & TV", "Música y Video", "Redes Sociales", "Inteligencia Artificial", "Compras", "Otros"];
 
-    const gridSize = rows * cols;
+    // Helper to map old data or unassigned to categories
+    tiles.forEach(t => {
+        // Simple heuristic for legacy data or if category missing
+        if (!t.category) {
+            // Try to guess orput in 'Otros'?
+            // For now, let's just put them in 'Productividad' or 'Otros'
+            t.category = assignCategory(t);
+        }
 
-    for (let i = 0; i < gridSize; i++) {
-        const tileData = activeWebmix.tiles.find(t => t.position === i);
-        const tileEl = document.createElement('div');
+        if (!categories[t.category]) {
+            categories[t.category] = [];
+        }
+        categories[t.category].push(t);
+    });
 
-        if (tileData) {
+    // Render Groups
+    // Use fixed order + dynamic
+    const catsToRender = [...new Set([...defaultCats, ...Object.keys(categories)])];
+
+    catsToRender.forEach(catName => {
+        const catTiles = categories[catName] || [];
+        if (catTiles.length === 0) return; // Hide empty categories? User wants categories visible. Or maybe only if inhabited. usually only inhabited.
+
+        const groupEl = document.createElement('div');
+        groupEl.className = 'category-group';
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'category-header';
+        headerEl.innerHTML = `<span>${catName}</span>`;
+        groupEl.appendChild(headerEl);
+
+        const tilesContainer = document.createElement('div');
+        tilesContainer.className = 'category-tiles';
+
+        catTiles.forEach(tileData => {
+            const tileEl = document.createElement('div');
             tileEl.className = 'tile';
             tileEl.style.backgroundColor = tileData.color;
             tileEl.style.color = isDark(tileData.color) ? '#fff' : '#000';
 
-            // ICON ONLY as requested
-            tileEl.innerHTML = `
-                <div class="tile-icon"><i class="${tileData.icon}"></i></div>
-            `;
-            // NOTE: Name hidden by CSS .tile-name display:none, removed from HTML for leaner DOM
+            tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}"></i></div>`;
+            tileEl.title = tileData.name; // Tooltip since name is hidden
 
             tileEl.onclick = (e) => window.open(tileData.url, '_blank');
             tileEl.oncontextmenu = (e) => {
                 e.preventDefault();
-                openEditModal(i, tileData);
+                showConfirm("¿Borrar " + tileData.name + "?", () => {
+                    activeWebmix.tiles = activeWebmix.tiles.filter(t => t.id !== tileData.id);
+                    saveState();
+                    renderGrid();
+                    showToast("App borrada", "success");
+                });
             };
 
-            tileEl.setAttribute('draggable', true);
-            tileEl.ondragstart = (e) => dragStart(e, i);
-            tileEl.ondragover = (e) => e.preventDefault();
-            tileEl.ondrop = (e) => drop(e, i);
+            // Basic drag events (stubbed for now as grid pos is gone, reordering would need list logic)
+            // tileEl.setAttribute('draggable', true);
 
-        } else {
-            tileEl.className = 'tile tile-add';
-            tileEl.innerHTML = '<i class="ri-add-line"></i>';
-            tileEl.onclick = () => openAppCatalog(i, false);
-            tileEl.ondragover = (e) => e.preventDefault();
-            tileEl.ondrop = (e) => drop(e, i);
-        }
+            tilesContainer.appendChild(tileEl);
+        });
 
-        gridContainer.appendChild(tileEl);
-    }
+        groupEl.appendChild(tilesContainer);
+        gridContainer.appendChild(groupEl);
+    });
+}
+
+function assignCategory(tile) {
+    // Basic mapping for migration
+    const n = tile.name.toLowerCase();
+    if (n.includes('google') || n.includes('mail') || n.includes('drive')) return 'Productividad y Herramientas';
+    if (n.includes('netflix') || n.includes('disney') || n.includes('hbo') || n.includes('movistar') || n.includes('prime')) return 'Streaming & TV';
+    if (n.includes('youtube') || n.includes('spotify') || n.includes('twitch') || n.includes('music')) return 'Música y Video';
+    if (n.includes('twitter') || n.includes('facebook') || n.includes('instagram') || n.includes('linkedin') || n.includes('reddit') || n.includes('discord')) return 'Redes Sociales';
+    if (n.includes('gpt') || n.includes('ai') || n.includes('midjourney') || n.includes('gemini')) return 'Inteligencia Artificial';
+    if (n.includes('amazon') || n.includes('ebay') || n.includes('shop')) return 'Compras';
+    return 'Otros';
 }
 
 // Logic
@@ -552,7 +577,11 @@ function updateColorSelection() {
 }
 
 function setupEventListeners() {
-    document.getElementById('add-webmix-btn').onclick = createNewWebmix;
+    const addAppBtn = document.getElementById('add-app-btn');
+    if (addAppBtn) {
+        addAppBtn.onclick = () => openAppCatalog(null, false);
+    }
+    // document.getElementById('add-webmix-btn').onclick = createNewWebmix; // Removed
     saveBtn.onclick = saveTile;
     deleteBtn.onclick = deleteTile;
     settingsBtn.onclick = () => settingsModal.classList.remove('hidden'); // Global settings (legacy)
@@ -625,22 +654,60 @@ function setupGlobalUpload() {
 }
 
 // Onboarding Logic
+// App Catalog with Categories
 const recommendedPlatforms = [
-    { name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4' },
-    { name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000' },
-    { name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335' },
-    { name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000' },
-    { name: 'Instagram', url: 'https://instagram.com', icon: 'ri-instagram-fill', color: '#E1306C' },
-    { name: 'Facebook', url: 'https://facebook.com', icon: 'ri-facebook-fill', color: '#1877F2' },
-    { name: 'Amazon', url: 'https://amazon.com', icon: 'ri-shopping-cart-fill', color: '#FF9900' },
-    { name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914' },
-    { name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954' },
-    { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'ri-linkedin-fill', color: '#0077B5' },
-    { name: 'GitHub', url: 'https://github.com', icon: 'ri-github-fill', color: '#181717' },
-    { name: 'Discord', url: 'https://discord.com', icon: 'ri-discord-fill', color: '#5865F2' },
-    { name: 'Reddit', url: 'https://reddit.com', icon: 'ri-reddit-fill', color: '#FF4500' },
-    { name: 'Twitch', url: 'https://twitch.tv', icon: 'ri-twitch-fill', color: '#9146FF' },
-    { name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F' }
+    {
+        category: "Search & Social",
+        apps: [
+            { name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4' },
+            { name: 'Bing', url: 'https://bing.com', icon: 'ri-search-eye-line', color: '#008373' },
+            { name: 'Twitter', url: 'https://twitter.com', icon: 'ri-twitter-x-fill', color: '#000000' },
+            { name: 'Instagram', url: 'https://instagram.com', icon: 'ri-instagram-fill', color: '#E1306C' },
+            { name: 'Facebook', url: 'https://facebook.com', icon: 'ri-facebook-fill', color: '#1877F2' },
+            { name: 'LinkedIn', url: 'https://linkedin.com', icon: 'ri-linkedin-fill', color: '#0077B5' },
+            { name: 'Pinterest', url: 'https://pinterest.com', icon: 'ri-pinterest-fill', color: '#BD081C' },
+            { name: 'TikTok', url: 'https://tiktok.com', icon: 'ri-video-chat-line', color: '#000000' },
+            { name: 'Snapchat', url: 'https://snapchat.com', icon: 'ri-snapchat-fill', color: '#FFFC00' }
+        ]
+    },
+    {
+        category: "Entertainment",
+        apps: [
+            { name: 'YouTube', url: 'https://youtube.com', icon: 'ri-youtube-fill', color: '#FF0000' },
+            { name: 'Netflix', url: 'https://netflix.com', icon: 'ri-movie-2-fill', color: '#E50914' },
+            { name: 'Spotify', url: 'https://open.spotify.com', icon: 'ri-spotify-fill', color: '#1DB954' },
+            { name: 'Twitch', url: 'https://twitch.tv', icon: 'ri-twitch-fill', color: '#9146FF' },
+            { name: 'Disney+', url: 'https://disneyplus.com', icon: 'ri-mv-fill', color: '#113CCF' },
+            { name: 'Prime Video', url: 'https://primevideo.com', icon: 'ri-video-fill', color: '#00A8E1' },
+            { name: 'SoundCloud', url: 'https://soundcloud.com', icon: 'ri-soundcloud-fill', color: '#FF5500' }
+        ]
+    },
+    {
+        category: "Productivity & Tools",
+        apps: [
+            { name: 'Gmail', url: 'https://mail.google.com', icon: 'ri-mail-fill', color: '#EA4335' },
+            { name: 'Outlook', url: 'https://outlook.com', icon: 'ri-mail-send-fill', color: '#0078D4' },
+            { name: 'Drive', url: 'https://drive.google.com', icon: 'ri-hard-drive-2-fill', color: '#1FA463' },
+            { name: 'ChatGPT', url: 'https://chat.openai.com', icon: 'ri-openai-fill', color: '#10A37F' },
+            { name: 'GitHub', url: 'https://github.com', icon: 'ri-github-fill', color: '#181717' },
+            { name: 'Slack', url: 'https://slack.com', icon: 'ri-slack-fill', color: '#4A154B' },
+            { name: 'Trello', url: 'https://trello.com', icon: 'ri-kanban-view', color: '#0079BF' },
+            { name: 'Canva', url: 'https://canva.com', icon: 'ri-brush-fill', color: '#00C4CC' },
+            { name: 'Dropbox', url: 'https://dropbox.com', icon: 'ri-dropbox-fill', color: '#0061FF' }
+        ]
+    },
+    {
+        category: "News & Shopping",
+        apps: [
+            { name: 'Amazon', url: 'https://amazon.com', icon: 'ri-shopping-cart-fill', color: '#FF9900' },
+            { name: 'Reddit', url: 'https://reddit.com', icon: 'ri-reddit-fill', color: '#FF4500' },
+            { name: 'eBay', url: 'https://ebay.com', icon: 'ri-shopping-bag-3-fill', color: '#E53238' },
+            { name: 'AliExpress', url: 'https://aliexpress.com', icon: 'ri-shopping-bag-fill', color: '#FF4747' },
+            { name: 'CNN', url: 'https://cnn.com', icon: 'ri-newspaper-fill', color: '#CC0000' },
+            { name: 'BBC', url: 'https://bbc.com', icon: 'ri-article-fill', color: '#BB1919' },
+            { name: 'Wikipedia', url: 'https://wikipedia.org', icon: 'ri-book-open-fill', color: '#000000' }
+        ]
+    }
 ];
 
 let onboardingSelected = new Set();
@@ -653,65 +720,82 @@ function initOnboarding() {
     openAppCatalog(null, true);
 }
 
+// App Catalog Redirection
 function openAppCatalog(targetPos, isOnboarding = false) {
-    onboardingTargetPos = targetPos;
-    isOnboardingMode = isOnboarding;
-    onboardingSelected.clear();
-
-    const modal = document.getElementById('onboarding-modal');
-    const grid = document.getElementById('onboarding-grid');
-    const finishBtn = document.getElementById('finish-onboarding-btn');
-    const customBtn = document.getElementById('custom-website-btn');
-
-    // Reset UI
-    grid.innerHTML = '';
-    modal.classList.remove('hidden');
-
-    // Update Text
-    const title = modal.querySelector('h2');
-    const subtitle = modal.querySelector('p');
-
     if (isOnboarding) {
-        if (title) title.textContent = "Welcome to Gridify";
-        if (subtitle) subtitle.textContent = "Select the platforms you use to build your dashboard.";
-        finishBtn.textContent = "Get Started";
-        if (customBtn) customBtn.classList.add('hidden');
+        localStorage.removeItem('gridify_onboarded'); // Clear flag so catalog knows? 
+        // Actually, catalog logic is standalone. 
+        // We just redirect.
+    }
+    // Store target pos if needed, though catalog pushes to end usually.
+    // If specific pos, maybe store in LS?
+    if (targetPos !== null) {
+        localStorage.setItem('glim_target_pos', targetPos);
     } else {
-        if (title) title.textContent = "Add Apps";
-        if (subtitle) subtitle.textContent = "Select apps to add to your webmix.";
-        finishBtn.textContent = "Add Selected";
-        if (customBtn) customBtn.classList.remove('hidden');
+        localStorage.removeItem('glim_target_pos');
     }
 
-    // Populate
-    recommendedPlatforms.forEach((p, idx) => {
-        const card = document.createElement('div');
-        card.className = 'platform-card';
-        card.innerHTML = `
-            <i class="${p.icon}" style="color: ${p.color}"></i>
-            <span>${p.name}</span>
-        `;
+    if (isOnboarding) {
+        window.location.href = 'catalog.html?onboarding=true';
+    } else {
+        window.location.href = 'catalog.html';
+    }
+}
 
-        card.onclick = () => {
-            if (onboardingSelected.has(idx)) {
-                onboardingSelected.delete(idx);
-                card.classList.remove('selected');
-            } else {
-                onboardingSelected.add(idx);
-                card.classList.add('selected');
+function checkIncomingApps() {
+    const newAppsJson = localStorage.getItem('glim_new_apps');
+    if (newAppsJson) {
+        try {
+            const newApps = JSON.parse(newAppsJson);
+            if (newApps.length > 0) {
+                const activeWebmix = getActiveWebmix();
+
+                // If this is the FIRST run (onboarding finish), CLEAR default tiles.
+                // We check if 'gridify_onboarded' is NOT set yet.
+                // However, initOnboarding sets it? No, initOnboarding redirects.
+                // The redirected page sends us back here.
+
+                if (!localStorage.getItem('gridify_onboarded')) {
+                    activeWebmix.tiles = []; // Clear defaults
+                }
+
+                // Check target pos
+                let targetPos = parseInt(localStorage.getItem('glim_target_pos'));
+                let pos = !isNaN(targetPos) ? targetPos : 0;
+
+                // If appending (no specific target), find first empty from end? Or just fill holes?
+                // Standard logic: fill holes starting from pos.
+
+                newApps.forEach(p => {
+                    while (activeWebmix.tiles.some(t => t.position === pos)) {
+                        pos++;
+                    }
+
+                    activeWebmix.tiles.push({
+                        id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                        position: pos++,
+                        name: p.name,
+                        url: p.url,
+                        icon: p.icon,
+                        color: p.color,
+                        showText: true,
+                        category: p.category // Preservation of category
+                    });
+                });
+
+                saveState();
+                renderGrid(); // explicit re-render
+                showToast(`${newApps.length} apps added from Catalog!`, 'success');
             }
-        };
-        grid.appendChild(card);
-    });
+        } catch (e) { console.error("Error processing new apps", e); }
 
-    finishBtn.onclick = handleOnboardingFinish;
+        localStorage.removeItem('glim_new_apps');
+        localStorage.removeItem('glim_target_pos');
 
-    if (customBtn) {
-        customBtn.onclick = () => {
-            modal.classList.add('hidden');
-            // Open standard edit modal
-            openEditModal(onboardingTargetPos !== null ? onboardingTargetPos : 0, null);
-        };
+        // Mark as onboarded
+        if (!localStorage.getItem('gridify_onboarded')) {
+            localStorage.setItem('gridify_onboarded', 'true');
+        }
     }
 }
 
@@ -723,28 +807,16 @@ function handleOnboardingFinish() {
     const newTiles = [];
     let pos = isOnboardingMode ? 0 : (onboardingTargetPos !== null ? onboardingTargetPos : 0);
 
-    // Find next available slots if appending
-    // If specific targetPos is clicked, we put first one there.
-    // Others go to next available slots? Or just sequential?
-    // Let's go sequential from pos.
-
-    onboardingSelected.forEach(idx => {
-        const p = recommendedPlatforms[idx];
-
-        // If appending, check if slot is taken. 
-        // Simple approach: Shift existing tiles or just overwrite empty?
-        // Gridify usually implies fixed slots. 
-        // Let's just place them. If slot taken, find next empty.
-
+    onboardingSelected.forEach(p => {
+        // Check availability if not onboarding
         if (!isOnboardingMode) {
-            // Find next empty spot >= pos
             while (activeWebmix.tiles.some(t => t.position === pos)) {
                 pos++;
             }
         }
 
         newTiles.push({
-            id: 't-' + Date.now() + '-' + idx,
+            id: 't-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
             position: pos++,
             name: p.name,
             url: p.url,
@@ -755,21 +827,16 @@ function handleOnboardingFinish() {
     });
 
     if (isOnboardingMode) {
-        // Overwrite standard Home webmix
         const homeWm = state.webmixes.find(w => w.id === 'wm-home');
-
         if (newTiles.length === 0) {
-            // Default if empty
             newTiles.push({ id: 't-def', position: 0, name: 'Google', url: 'https://google.com', icon: 'ri-google-fill', color: '#4285F4', showText: true });
         }
-
         if (homeWm) {
             homeWm.tiles = newTiles;
         }
         localStorage.setItem('gridify_onboarded', 'true');
         showToast("Welcome to Gridify!", "success");
     } else {
-        // Append Mode
         if (newTiles.length > 0) {
             activeWebmix.tiles = [...activeWebmix.tiles, ...newTiles];
             showToast(`${newTiles.length} apps added.`, "success");

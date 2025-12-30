@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gridify - Your Ultimate Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 
@@ -22,12 +22,15 @@
                 <i class="ri-menu-fold-line"></i>
             </button>
 
-            <nav class="webmix-list" id="webmix-list">
-                <!-- Webmix tabs will be injected here -->
-            </nav>
-            <button class="add-webmix-btn" id="add-webmix-btn">
-                <i class="ri-add-line"></i> <span>New Webmix</span>
+            <button class="add-webmix-btn" id="add-app-btn"
+                style="background: var(--accent-color); color: #1A1A2E; border: none; font-weight: 600; margin-bottom: auto;">
+                <i class="ri-add-line"></i> <span>Add App</span>
             </button>
+            <nav class="webmix-list" id="webmix-list" style="display:none;"></nav>
+            <!-- Hidden but kept for structure if needed -->
+
+            <div class="sidebar-spacer" style="flex: 1;"></div>
+
             <div class="sidebar-footer">
                 <button id="settings-btn"><i class="ri-settings-4-line"></i></button>
                 <button id="user-btn"><i class="ri-user-3-line"></i></button>
