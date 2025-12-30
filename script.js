@@ -252,6 +252,12 @@ function renderGrid() {
                     saveState();
                     renderGrid();
                     showToast("App borrada", "success");
+
+                    if (activeWebmix.tiles.length === 0) {
+                        // All apps deleted, redirect to catalog
+                        // treating as onboarding/empty state
+                        openAppCatalog(null, true);
+                    }
                 });
             };
 
