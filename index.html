@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridify - Your Ultimate Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <i class="ri-dashboard-3-line"></i> <span>Gridify</span>
+            </div>
+
+            <button class="sidebar-toggle-btn" id="sidebar-toggle">
+                <i class="ri-menu-fold-line"></i>
+            </button>
+
+            <nav class="webmix-list" id="webmix-list">
+                <!-- Webmix tabs will be injected here -->
+            </nav>
+            <button class="add-webmix-btn" id="add-webmix-btn">
+                <i class="ri-add-line"></i> <span>New Webmix</span>
+            </button>
+            <div class="sidebar-footer">
+                <button id="settings-btn"><i class="ri-settings-4-line"></i></button>
+                <button id="user-btn"><i class="ri-user-3-line"></i></button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="main-content">
+            <div class="background-overlay"></div>
+
+            <header class="top-bar">
+                <div class="search-container">
+                    <i class="ri-google-fill search-icon"></i>
+                    <input type="text" id="main-search" placeholder="Search the web...">
+                    <button class="search-btn"><i class="ri-search-line"></i></button>
+                </div>
+            </header>
+
+            <div class="grid-container-wrapper">
+                <div class="grid-container" id="grid-container">
+                    <!-- Tiles will be generated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay hidden" id="tile-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Tile</h3>
+                <button class="close-modal"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group wrapper">
+                    <label>URL</label>
+                    <input type="text" id="tile-url" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="tile-name" placeholder="Website Name">
+                </div>
+                <!-- ... -->
+                <div class="form-group">
+                    <label>Icon</label>
+                    <div class="icon-input-container">
+                        <input type="text" id="tile-icon" style="display:none;">
+                        <div id="icon-preview-box" class="icon-preview-box"><i class="ri-question-line"></i></div>
+                        <span style="font-size: 0.8rem; color: #888; margin-left: 10px;">Generated from Name</span>
+                    </div>
+                    <div id="icon-suggestions" class="icon-suggestions hidden">
+                        <!-- Icons injected here -->
+                        <div class="loading-icons hidden"><i class="ri-loader-4-line spin"></i> Suggesting...</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 0.8rem; opacity: 0.7;">Popular:</label>
+                        <div class="popular-icons">
+                            <i class="ri-google-fill" onclick="selectIcon('ri-google-fill')"></i>
+                            <i class="ri-youtube-fill" onclick="selectIcon('ri-youtube-fill')"></i>
+                            <i class="ri-twitter-x-fill" onclick="selectIcon('ri-twitter-x-fill')"></i>
+                            <i class="ri-facebook-circle-fill" onclick="selectIcon('ri-facebook-circle-fill')"></i>
+                            <i class="ri-instagram-fill" onclick="selectIcon('ri-instagram-fill')"></i>
+                            <i class="ri-amazon-fill" onclick="selectIcon('ri-amazon-fill')"></i>
+                            <i class="ri-netflix-fill" onclick="selectIcon('ri-netflix-fill')"></i>
+                            <i class="ri-spotify-fill" onclick="selectIcon('ri-spotify-fill')"></i>
+                            <i class="ri-github-fill" onclick="selectIcon('ri-github-fill')"></i>
+                            <i class="ri-discord-fill" onclick="selectIcon('ri-discord-fill')"></i>
+                            <i class="ri-reddit-fill" onclick="selectIcon('ri-reddit-fill')"></i>
+                            <i class="ri-linkedin-fill" onclick="selectIcon('ri-linkedin-fill')"></i>
+                            <i class="ri-chat-1-fill" onclick="selectIcon('ri-chat-1-fill')"></i>
+                            <i class="ri-mail-fill" onclick="selectIcon('ri-mail-fill')"></i>
+                            <i class="ri-shopping-cart-fill" onclick="selectIcon('ri-shopping-cart-fill')"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Show Text</label>
+                    <input type="checkbox" id="tile-show-text" checked>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal">Cancel</button>
+                <button class="btn btn-danger hidden" id="delete-tile-btn">Delete</button>
+                <button class="btn btn-primary" id="save-tile-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-modal"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Wallpaper Gallery</label>
+                    <div class="wallpaper-grid" id="wallpaper-grid">
+                        <!-- Space/Dark -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=400&fit=crop"
+                                alt="Space">
+                        </div>
+                        <!-- Nature/Forest -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=400&fit=crop"
+                                alt="Nature">
+                        </div>
+                        <!-- Cyberpunk/Neon -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400&fit=crop"
+                                alt="Neon">
+                        </div>
+
+                        <!-- Abstract/gradients -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=400&fit=crop"
+                                alt="Gradient">
+                        </div>
+                        <!-- Mountains -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=400&fit=crop"
+                                alt="Mountains">
+                        </div>
+                        <!-- City/Night -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=2064&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=400&fit=crop"
+                                alt="City">
+                        </div>
+
+                        <!-- Minimal/Clean -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=2070&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=400&fit=crop"
+                                alt="Alpine">
+                        </div>
+                        <!-- Sea/Water -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=400&fit=crop"
+                                alt="Beach">
+                        </div>
+                        <!-- Coding/Tech -->
+                        <div class="wallpaper-option"
+                            data-bg="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop">
+                            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&fit=crop"
+                                alt="Tech">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Custom Wallpaper</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="global-bg-upload" accept="image/*">
+                        <label for="global-bg-upload" class="file-upload-label">
+                            <i class="ri-upload-cloud-2-line"></i> Upload Image
+                        </label>
+                        <span id="global-file-name">No file chosen</span>
+                    </div>
+                    <div style="margin-top: 10px; text-align: center;">OR</div>
+                    <input type="text" id="bg-url-input" placeholder="https://..." style="margin-top: 10px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal">Cancel</button>
+                <button class="btn btn-primary" id="save-settings-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webmix Settings Modal -->
+    <div class="modal-overlay hidden" id="webmix-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Webmix Settings</h3>
+                <button class="close-modal-webmix"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="webmix-name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Columns</label>
+                        <input type="number" id="webmix-cols" min="4" max="20" value="8">
+                    </div>
+                    <div class="form-group half">
+                        <label>Rows</label>
+                        <input type="number" id="webmix-rows" min="3" max="12" value="6">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Webmix Icon (Auto-generated)</label>
+                    <div class="icon-input-container">
+                        <input type="text" id="webmix-icon" style="display:none;">
+                        <div id="webmix-icon-preview" class="icon-preview-box"><i class="ri-home-line"></i></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tab Color</label>
+                    <div class="color-picker" id="webmix-color-picker">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+                <!-- Webmix specific wallpaper removed as requested -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal-webmix">Cancel</button>
+                <button class="btn btn-danger" id="delete-webmix-btn">Delete Webmix</button>
+                <button class="btn btn-primary" id="save-webmix-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Input Modal -->
+    <div class="modal-overlay hidden" id="prompt-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="prompt-title">Input</h3>
+                <button class="close-modal-prompt"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label id="prompt-label">Value</label>
+                    <input type="text" id="prompt-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal-prompt">Cancel</button>
+                <button class="btn btn-primary" id="prompt-confirm-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay hidden" id="confirm-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Confirm Action</h3>
+                <button class="close-modal-confirm"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">Are you sure?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal-confirm">Cancel</button>
+                <button class="btn btn-danger" id="confirm-yes-btn">Yes, I'm sure</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div class="modal-overlay hidden" id="onboarding-modal" style="z-index: 2000;">
+        <div class="modal" style="max-width: 600px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border:none; padding-bottom: 0;">
+                <div style="font-size: 3rem; color: var(--accent-color); margin-bottom: 10px;">
+                    <i class="ri-dashboard-3-line"></i>
+                </div>
+            </div>
+            <h2 style="font-size: 2rem; margin-bottom: 10px;">Welcome to Gridify</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">Select the platforms you use correctly to
+                build your personalized dashboard.</p>
+
+            <div class="platform-selection-grid" id="onboarding-grid">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="modal-footer" style="justify-content: center; border: none; padding-top: 30px;">
+                <button class="btn btn-primary" id="finish-onboarding-btn"
+                    style="padding: 12px 40px; font-size: 1.1rem;">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
