@@ -1307,17 +1307,46 @@ function renderWidgets() {
         // === STOCK/MARKETS WIDGET ===
         if (w.type === 'stock') {
             header.innerHTML = `<i class="ri-stock-line" style="margin-right: 5px;"></i> Mercados`;
-            contentBox.innerHTML = `<i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>`;
 
-            const symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA'];
+            // Initialize symbols from settings or use defaults
+            if (!w.settings) w.settings = {};
+            if (!w.settings.symbols) w.settings.symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA'];
 
-            // Fetch all stocks
-            Promise.all(symbols.map(symbol =>
-                fetch(`https://finances.logise1123.workers.dev/history?symbol=${symbol}`)
-                    .then(r => r.json())
-                    .catch(() => null)
-            )).then(results => {
-                let html = '<div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">';
+            const symbols = w.settings.symbols;
+            let cachedResults = null; // Cache for API results
+
+            // Right-click context menu for configuration
+            el.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const currentSymbols = w.settings.symbols.join(', ');
+                const newSymbols = prompt('Ingresa los símbolos de acciones separados por comas:\n(Ejemplo: AAPL, GOOGL, MSFT)', currentSymbols);
+
+                if (newSymbols !== null && newSymbols.trim() !== '') {
+                    // Parse and clean symbols
+                    w.settings.symbols = newSymbols.split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+                    saveState();
+                    renderWidgets(); // Re-render to show new symbols
+                }
+            };
+
+            // Function to render HTML from cached data (NO API CALL)
+            const renderStockHTML = (results) => {
+                if (!results) return;
+
+                // Get widget width to determine sizing
+                const widgetWidth = parseFloat(el.style.width) || 250;
+                const isCompact = widgetWidth < 220;
+
+                // Responsive font sizes
+                const symbolSize = isCompact ? '0.75rem' : '0.9rem';
+                const priceSize = isCompact ? '0.65rem' : '0.75rem';
+                const changeSize = isCompact ? '0.7rem' : '0.85rem';
+                const padding = isCompact ? '4px 6px' : '6px 8px';
+                const gap = isCompact ? '4px' : '8px';
+
+                let html = `<div style="display: flex; flex-direction: column; gap: ${gap}; width: 100%; overflow: hidden;">`;
 
                 results.forEach((data, index) => {
                     if (data && data.results && data.results[symbols[index]]) {
@@ -1336,25 +1365,51 @@ function renderWidgets() {
                             const arrow = isPositive ? '▲' : '▼';
 
                             html += `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${color};">
-                                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                                        <div style="font-weight: 700; font-size: 0.9rem;">${symbols[index]}</div>
-                                        <div style="font-size: 0.75rem; opacity: 0.6;">$${parseFloat(price).toFixed(2)}</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: ${padding}; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid ${color}; min-width: 0;">
+                                    <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;">
+                                        <div style="font-weight: 700; font-size: ${symbolSize}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${symbols[index]}</div>
+                                        <div style="font-size: ${priceSize}; opacity: 0.6; white-space: nowrap;">$${parseFloat(price).toFixed(2)}</div>
                                     </div>
-                                    <div style="display: flex; align-items: center; gap: 4px; color: ${color}; font-weight: 600; font-size: 0.85rem;">
+                                    <div style="display: flex; align-items: center; gap: 4px; color: ${color}; font-weight: 600; font-size: ${changeSize}; white-space: nowrap;">
                                         <span>${arrow}</span>
                                         <span>${Math.abs(change).toFixed(2)}%</span>
                                     </div>
                                 </div>
                             `;
                         }
+                    } else {
+                        // Show error for failed symbols
+                        html += `
+                            <div style="display: flex; align-items: center; padding: ${padding}; background: rgba(255,255,255,0.03); border-radius: 8px; border-left: 3px solid #EF4444; opacity: 0.5;">
+                                <div style="font-size: ${symbolSize};">${symbols[index]} - Error</div>
+                            </div>
+                        `;
                     }
                 });
 
                 html += '</div>';
                 contentBox.innerHTML = html;
+            };
+
+            // Initial data fetch (ONLY ONCE)
+            contentBox.innerHTML = `<i class="ri-loader-4-line" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>`;
+
+            Promise.all(symbols.map(symbol =>
+                fetch(`https://finances.logise1123.workers.dev/history?symbol=${symbol}`)
+                    .then(r => r.json())
+                    .catch(() => null)
+            )).then(results => {
+                cachedResults = results; // Cache the results
+                renderStockHTML(results);
             }).catch(() => {
                 contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ Error de API</div>`;
+            });
+
+            // Listen for resize events to adapt layout (WITHOUT re-fetching)
+            el.addEventListener('widgetResize', () => {
+                if (cachedResults) {
+                    renderStockHTML(cachedResults);
+                }
             });
         }
 
