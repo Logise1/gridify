@@ -238,10 +238,39 @@ function renderGrid() {
         catTiles.forEach(tileData => {
             const tileEl = document.createElement('div');
             tileEl.className = 'tile';
-            tileEl.style.backgroundColor = tileData.color;
-            tileEl.style.color = isDark(tileData.color) ? '#fff' : '#000';
 
-            tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}"></i></div>`;
+            // Category Color Mapping
+            const categoryColors = {
+                "Productividad y Herramientas": "#eeff00", // Blue
+                "Streaming & TV": "#9900ff", // Purple
+                "Música y Video": "#f72584", // Pink/Red
+                "Redes Sociales": "#38eeff", // Industry Blue
+                "Inteligencia Artificial": "#64ef48", // Light Blue
+                "Compras": "#F77F00", // Orange
+                "Otros": "#808080" // Gray
+            };
+
+            // Theme Logic
+            let displayColor = tileData.color; // Brand
+
+            // 1. Force Category Color (Requested behavior: "Apps de la categoria sea todos el mismo")
+            // This becomes the new "Original/Default" look.
+            if (tileData.category && categoryColors[tileData.category]) {
+                displayColor = categoryColors[tileData.category];
+            }
+
+            // 2. Override if a specific GLOBAL MONO theme is set (e.g. "White", "Purple")
+            // If themeColor is 'original' or null, we keep the Category Color set above.
+            if (state.settings.themeColor && state.settings.themeColor !== 'original') {
+                displayColor = state.settings.themeColor;
+            }
+
+            // Calculate Background: "Tonos del fondo" (Glass tint of the displayColor)
+            let rgbaBg = hexToRgba(displayColor, 0.2); // Saturated glass
+            tileEl.style.borderColor = hexToRgba(displayColor, 0.3);
+            tileEl.style.backgroundColor = rgbaBg;
+
+            tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}" style="color: ${displayColor}"></i></div>`;
             tileEl.title = tileData.name; // Tooltip since name is hidden
 
             tileEl.onclick = (e) => window.open(tileData.url, '_blank');
@@ -255,7 +284,6 @@ function renderGrid() {
 
                     if (activeWebmix.tiles.length === 0) {
                         // All apps deleted, redirect to catalog
-                        // treating as onboarding/empty state
                         openAppCatalog(null, true);
                     }
                 });
@@ -275,13 +303,26 @@ function renderGrid() {
 function assignCategory(tile) {
     // Basic mapping for migration
     const n = tile.name.toLowerCase();
-    if (n.includes('google') || n.includes('mail') || n.includes('drive')) return 'Productividad y Herramientas';
+    if (n.includes('google') || n.includes('mail') || n.includes('drive') || n.includes('whatsapp') || n.includes('slack')) return 'Productividad y Herramientas';
     if (n.includes('netflix') || n.includes('disney') || n.includes('hbo') || n.includes('movistar') || n.includes('prime')) return 'Streaming & TV';
     if (n.includes('youtube') || n.includes('spotify') || n.includes('twitch') || n.includes('music')) return 'Música y Video';
     if (n.includes('twitter') || n.includes('facebook') || n.includes('instagram') || n.includes('linkedin') || n.includes('reddit') || n.includes('discord')) return 'Redes Sociales';
     if (n.includes('gpt') || n.includes('ai') || n.includes('midjourney') || n.includes('gemini')) return 'Inteligencia Artificial';
     if (n.includes('amazon') || n.includes('ebay') || n.includes('shop')) return 'Compras';
     return 'Otros';
+}
+
+function hexToRgba(hex, alpha) {
+    let c;
+    if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        c = hex.substring(1).split('');
+        if (c.length === 3) {
+            c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c = '0x' + c.join('');
+        return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + alpha + ')';
+    }
+    return 'rgba(255,255,255,0.1)'; // Fallback
 }
 
 // Logic
@@ -565,11 +606,15 @@ async function fetchIconSuggestion() {
 // Helpers
 function isDark(color) {
     if (!color) return true;
-    const hex = color.replace('#', '');
+    let hex = color.replace('#', '');
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
-    return ((r * 299) + (g * 587) + (b * 114)) / 1000 < 128;
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return yiq < 128; // Standard threshold
 }
 
 function updateColorSelection() {
@@ -590,13 +635,36 @@ function setupEventListeners() {
     // document.getElementById('add-webmix-btn').onclick = createNewWebmix; // Removed
     saveBtn.onclick = saveTile;
     deleteBtn.onclick = deleteTile;
-    settingsBtn.onclick = () => settingsModal.classList.remove('hidden'); // Global settings (legacy)
-    saveSettingsBtn.onclick = () => {
-        state.settings.backgroundImage = bgUrlInput.value;
-        saveState(); init(); // Reload
-        settingsModal.classList.add('hidden');
+    // Theme Selection
+    window.selectTheme = function (color) {
+        state.settings.tempTheme = color;
+        document.querySelectorAll('.theme-option').forEach(opt => {
+            if (opt.dataset.color === color) opt.classList.add('selected'), opt.style.border = '2px solid white';
+            else opt.classList.remove('selected'), opt.style.border = '1px solid #555';
+        });
     };
 
+    saveSettingsBtn.onclick = () => {
+        state.settings.backgroundImage = bgUrlInput.value;
+        if (state.settings.tempTheme) {
+            state.settings.themeColor = state.settings.tempTheme;
+            delete state.settings.tempTheme;
+        }
+        saveState();
+        renderGrid();
+        settingsModal.classList.add('hidden');
+        showToast("Settings saved!", "success");
+    };
+
+    // ... existing code ...
+
+    settingsBtn.onclick = () => {
+        bgUrlInput.value = state.settings.backgroundImage || '';
+        // Set active theme UI
+        const currentTheme = state.settings.themeColor || 'original';
+        selectTheme(currentTheme);
+        settingsModal.classList.remove('hidden');
+    };
     closeModalBtns.forEach(btn => btn.onclick = closeEditModal);
     closePromptBtns.forEach(btn => btn.onclick = closeEditModal);
     closeConfirmBtns.forEach(btn => btn.onclick = closeEditModal);

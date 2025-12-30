@@ -175,6 +175,157 @@
         <button class="btn btn-primary" id="add-apps-btn">Añadir a Gridify</button>
     </div>
 
+    <!-- Custom App Modal -->
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Añadir Web Personalizada</h3>
+                <button class="close-btn" onclick="closeCustomModal()"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>URL</label>
+                    <input type="text" id="custom-url" placeholder="https://ejemplo.com">
+                </div>
+                <div class="input-group">
+                    <label>Nombre</label>
+                    <input type="text" id="custom-name" placeholder="Mi Sitio Web">
+                </div>
+                <div class="input-group">
+                    <label>Icono</label>
+                    <div class="icon-selector" id="icon-selector">
+                        <!-- Icons injected here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCustomModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="confirmCustomApp()">Añadir</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Modal Styles matching main app */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay:not(.hidden) {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: #1A1A2E;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            padding: 25px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay:not(.hidden) .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-family: inherit;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .icon-selector {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .icon-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .icon-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .icon-option.selected {
+            background: var(--accent-color);
+            color: #1A1A2E;
+        }
+    </style>
+
     <script>
         // Data
         const catalogData = [
@@ -259,6 +410,7 @@
         const actionBar = document.getElementById('action-bar');
         const badge = document.getElementById('count-badge');
         let selectedApps = new Set();
+        let selectedCustomIcon = 'ri-global-line';
 
         // Check Onboarding Mode
         const urlParams = new URLSearchParams(window.location.search);
@@ -269,6 +421,31 @@
             document.querySelector('.catalog-title p').textContent = "Selecciona tus aplicaciones favoritas para comenzar.";
         }
 
+        const commonIcons = [
+            'ri-global-line', 'ri-home-line', 'ri-star-line', 'ri-heart-line',
+            'ri-search-line', 'ri-shopping-cart-line', 'ri-movie-line', 'ri-music-line',
+            'ri-gamepad-line', 'ri-book-line', 'ri-briefcase-line', 'ri-mail-line',
+            'ri-chat-3-line', 'ri-calendar-line', 'ri-cloud-line', 'ri-map-pin-line',
+            'ri-camera-line', 'ri-image-line', 'ri-video-line', 'ri-file-line',
+            'ri-folder-line', 'ri-code-line', 'ri-settings-line', 'ri-user-line'
+        ];
+
+        function initIconSelector() {
+            const container = document.getElementById('icon-selector');
+            container.innerHTML = '';
+            commonIcons.forEach(icon => {
+                const el = document.createElement('div');
+                el.className = 'icon-option' + (icon === selectedCustomIcon ? ' selected' : '');
+                el.innerHTML = `<i class="${icon}"></i>`;
+                el.onclick = () => {
+                    document.querySelectorAll('.icon-option').forEach(i => i.classList.remove('selected'));
+                    el.classList.add('selected');
+                    selectedCustomIcon = icon;
+                };
+                container.appendChild(el);
+            });
+        }
+
         function render() {
             // Add Custom App Section at top
             const customSection = document.createElement('div');
@@ -276,7 +453,7 @@
             customSection.innerHTML = `
                  <div class="category-title"><i class="ri-global-line"></i> Personalizado</div>
                  <div class="apps-grid">
-                    <div class="app-card" onclick="addCustomApp()">
+                    <div class="app-card" onclick="openCustomModal()">
                         <div class="app-icon" style="color: #fff"><i class="ri-add-line"></i></div>
                         <div class="app-name">Añadir Website</div>
                     </div>
@@ -310,6 +487,7 @@
                 `;
                 content.appendChild(section);
             });
+            initIconSelector();
         }
 
         window.toggleApp = function (card, appString) {
@@ -328,25 +506,48 @@
             updateUI();
         };
 
-        window.addCustomApp = function () {
-            const url = prompt("Introduce la URL del sitio web (ej: https://miweb.com):");
-            if (url) {
-                let name = prompt("Nombre del sitio:");
-                if (!name) name = new URL(url).hostname;
+        window.openCustomModal = function () {
+            document.getElementById('custom-modal').classList.remove('hidden');
+            document.getElementById('custom-url').focus();
+        };
 
-                const customApp = {
-                    name: name,
-                    url: url.startsWith('http') ? url : 'https://' + url,
-                    icon: 'ri-global-line',
-                    color: '#ffffff',
-                    category: 'Otros'
-                };
+        window.closeCustomModal = function () {
+            document.getElementById('custom-modal').classList.add('hidden');
+            document.getElementById('custom-url').value = '';
+            document.getElementById('custom-name').value = '';
+            document.getElementById('custom-url').style.borderColor = ''; // Reset border color
+        };
 
-                // Add directly to selection
-                selectedApps.add(customApp);
-                updateUI();
-                alert(`"${name}" añadido a la selección.`);
+        window.confirmCustomApp = function () {
+            const urlInput = document.getElementById('custom-url');
+            const nameInput = document.getElementById('custom-name');
+            let url = urlInput.value.trim();
+            let name = nameInput.value.trim();
+
+            if (!url) {
+                urlInput.style.borderColor = '#FF4747';
+                return;
             }
+            urlInput.style.borderColor = ''; // Reset border color
+
+            if (!url.startsWith('http')) url = 'https://' + url;
+            if (!name) name = new URL(url).hostname;
+
+            const customApp = {
+                name: name,
+                url: url,
+                icon: selectedCustomIcon,
+                color: '#ffffff', // Default white for custom
+                category: 'Otros'
+            };
+
+            selectedApps.add(customApp);
+            updateUI();
+            closeCustomModal();
+            // Show feedback?
+            const btn = document.getElementById('add-apps-btn');
+            btn.innerHTML = `<i class="ri-check-line"></i> Website Añadido`;
+            setTimeout(() => { btn.innerHTML = "Añadir a Gridify"; }, 1500);
         };
 
         function updateUI() {
@@ -365,10 +566,15 @@
             window.location.href = 'index.html';
         };
 
-        // Escape key listener
+        // Escape key listener for modal and page
         document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('custom-modal');
             if (e.key === 'Escape') {
-                window.location.href = 'index.html';
+                if (!modal.classList.contains('hidden')) {
+                    closeCustomModal();
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         });
 

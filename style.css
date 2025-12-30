@@ -417,10 +417,14 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding-bottom: 50px;
+    align-items: center;
+    /* Center horizontally in flex column */
 }
 
 .category-group {
     width: 100%;
+    max-width: 1000px;
+    /* Limit width for nicer centering */
 }
 
 .category-header {
@@ -432,12 +436,15 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    justify-content: center;
 }
 
 .category-tiles {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 20px;
+    justify-content: center;
+    /* Center tiles in the row */
 }
 
 .tile {
