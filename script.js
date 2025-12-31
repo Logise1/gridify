@@ -312,27 +312,31 @@ function renderGrid() {
             }
 
             // Theme Logic
-            let displayColor = tileData.color || '#fff'; // Default
-
-            // 1. Force Category Color based on original logic
-            if (tileData.category && categoryColors[tileData.category]) {
-                displayColor = categoryColors[tileData.category];
-            }
+            let displayColor = tileData.color || '#fff'; // Default Brand Color
+            let categoryColor = (tileData.category && categoryColors[tileData.category]) ? categoryColors[tileData.category] : '#808080';
 
             let bgOpacity = (tileData.name === 'Outlook') ? 0.35 : 0.2;
             let rgbaBg;
             let borderColor;
 
-            // Theme Modes
             if (state.settings.themeColor === 'glass') {
-                // Glass Mode: Transparent bg, original/category icon color
+                // Glass Mode: Transparent bg
+                displayColor = categoryColor; // Standardize to category for consistency in glass, or could be brand. Let's stick to category for now unless requested.
                 rgbaBg = 'rgba(255, 255, 255, 0.05)';
                 borderColor = 'rgba(255, 255, 255, 0.2)';
+            } else if (state.settings.themeColor === 'vibrant') {
+                // Vibrant: Icon = Brand Color, Bg = Category Color
+                // displayColor stays as Brand Color (tileData.color)
+                rgbaBg = hexToRgba(categoryColor, bgOpacity);
+                borderColor = hexToRgba(categoryColor, 0.3);
+            } else if (state.settings.themeColor && state.settings.themeColor !== 'original') {
+                // Mono
+                displayColor = state.settings.themeColor;
+                rgbaBg = hexToRgba(displayColor, bgOpacity);
+                borderColor = hexToRgba(displayColor, 0.3);
             } else {
-                // Monocolor or Original with Tint
-                if (state.settings.themeColor && state.settings.themeColor !== 'original') {
-                    displayColor = state.settings.themeColor;
-                }
+                // Original (Legacy): Icon = Category Color, Bg = Category Color
+                displayColor = categoryColor;
                 rgbaBg = hexToRgba(displayColor, bgOpacity);
                 borderColor = hexToRgba(displayColor, 0.3);
             }
@@ -765,6 +769,9 @@ function setupEventListeners() {
     // Inline calculator in search bar
     const evaluateExpression = (expr) => {
         try {
+            // Allow x as multiplication
+            expr = expr.replace(/x/gi, '*');
+
             // Only allow numbers, operators, parentheses, spaces, and decimal points
             if (!/^[\d+\-*/().\s]+$/.test(expr)) return null;
 
@@ -1453,29 +1460,50 @@ function renderWidgets() {
                 `;
             };
 
+            const fetchWeather = (lat, lon) => {
+                fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.current_weather && d.daily) {
+                            weatherData = {
+                                temp: Math.round(d.current_weather.temperature),
+                                weatherCode: d.current_weather.weathercode,
+                                dailyData: d.daily
+                            };
+                            renderWeather();
+                        } else {
+                            contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ No disponible</div>`;
+                        }
+                    })
+                    .catch(() => contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ Error de conexión</div>`);
+            };
+
+            const fetchIPLocation = () => {
+                // Fallback to IP-based location
+                fetch('https://ipapi.co/json/')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.latitude && data.longitude) {
+                            fetchWeather(data.latitude, data.longitude);
+                        } else {
+                            throw new Error('No IP coords');
+                        }
+                    })
+                    .catch(() => {
+                        contentBox.innerHTML = `<div style="opacity: 0.7; text-align: center; padding: 20px;">
+                            <i class="ri-user-location-line" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                            Ubicación no encontrada
+                        </div>`;
+                    });
+            };
+
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const { latitude, longitude } = pos.coords;
-                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`)
-                        .then(r => r.json())
-                        .then(d => {
-                            if (d.current_weather && d.daily) {
-                                weatherData = {
-                                    temp: Math.round(d.current_weather.temperature),
-                                    weatherCode: d.current_weather.weathercode,
-                                    dailyData: d.daily
-                                };
-                                renderWeather();
-                            } else {
-                                contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ No disponible</div>`;
-                            }
-                        })
-                        .catch(() => contentBox.innerHTML = `<div style="opacity: 0.5;">⚠️ Error de conexión</div>`);
-                }, () => {
-                    contentBox.innerHTML = `<div style="opacity: 0.7; text-align: center; padding: 20px;">📍 Se requiere permiso de ubicación</div>`;
-                });
+                navigator.geolocation.getCurrentPosition(
+                    pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+                    () => fetchIPLocation() // Error/Denial -> IP fallback
+                );
             } else {
-                contentBox.innerHTML = `<div style="opacity: 0.5;">Geolocalización no soportada</div>`;
+                fetchIPLocation();
             }
 
             // Listen for resize events

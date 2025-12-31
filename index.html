@@ -140,6 +140,10 @@
                             title="Original Colors"
                             style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(45deg, #FF0000, #4CC9F0); cursor: pointer; border: 2px solid white;">
                         </div>
+                        <div class="theme-option" data-color="vibrant" onclick="selectTheme('vibrant')"
+                            title="Vibrant (Brand Icons + Category BG)"
+                            style="width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #ffdf40, #ff8359, #ff5757); cursor: pointer; border: 1px solid #555;">
+                        </div>
                         <div class="theme-option" data-color="glass" onclick="selectTheme('glass')"
                             title="Modo Transparente / Glass"
                             style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%); cursor: pointer; border: 1px solid rgba(255,255,255,0.6); backdrop-filter: blur(2px);">
@@ -237,8 +241,7 @@
                         </label>
                         <span id="global-file-name">No file chosen</span>
                     </div>
-                    <div style="margin-top: 10px; text-align: center;">OR</div>
-                    <input type="text" id="bg-url-input" placeholder="https://..." style="margin-top: 10px;">
+                    <input type="text" id="bg-url-input" style="display: none;">
                 </div>
             </div>
             <div class="modal-footer">
