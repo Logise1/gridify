@@ -6,6 +6,25 @@ const state = {
     }
 };
 
+// Firebase Init
+const firebaseConfig = {
+    apiKey: "AIzaSyCmtkRHdtd2s65P0_wqO6t25Evct3zWHCI",
+    authDomain: "gridify-98aa0.firebaseapp.com",
+    projectId: "gridify-98aa0",
+    storageBucket: "gridify-98aa0.firebasestorage.app",
+    messagingSenderId: "96525506292",
+    appId: "1:96525506292:web:4a822d63d6415d0bffb0a1",
+    measurementId: "G-8FD2GFP8HD"
+};
+try {
+    firebase.initializeApp(firebaseConfig);
+} catch (e) { console.log("Firebase already initialized"); }
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUser = null;
+let isCloudSyncing = false;
+
 const DEFAULT_DATA = {
     webmixes: [
         {
@@ -133,10 +152,52 @@ function init() {
     setupGlobalUpload();
     setupWallpaperGallery();
     initOnboarding();
+    setupAuth();
 }
 
-function saveState() {
+// User Data Sync
+async function syncToCloud() {
+    if (!currentUser || isCloudSyncing) return;
+    try {
+        await db.collection('users').doc(currentUser.uid).set({
+            state: JSON.stringify(state),
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast("Saved to cloud", "success");
+    } catch (e) {
+        console.error("Sync error", e);
+    }
+}
+
+async function syncFromCloud() {
+    if (!currentUser) return;
+    isCloudSyncing = true;
+    try {
+        const doc = await db.collection('users').doc(currentUser.uid).get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.state) {
+                const cloudState = JSON.parse(data.state);
+                Object.assign(state, cloudState);
+                saveState(false); // Local save without loop
+                renderSidebar();
+                renderGrid();
+                renderWidgets();
+                showToast("Synced from cloud", "success");
+            }
+        } else {
+            syncToCloud();
+        }
+    } catch (e) {
+        console.error("Load error", e);
+    } finally {
+        isCloudSyncing = false;
+    }
+}
+
+function saveState(sync = true) {
     localStorage.setItem('glimState', JSON.stringify(state));
+    if (sync) syncToCloud();
 }
 
 function getActiveWebmix() {
@@ -157,6 +218,10 @@ function renderSidebar() {
         } else {
             btn.style.borderLeftColor = 'transparent';
         }
+
+        // User Profile Indicator
+        const userIcon = currentUser ? (currentUser.photoURL || 'ri-user-smile-line') : 'ri-user-3-line';
+        const userColor = currentUser ? '#06d6a0' : 'inherit';
 
         btn.innerHTML = `
             <i class="${wm.icon}" style="color: ${wm.id === state.activeWebmixId ? wm.color : 'inherit'}"></i>
@@ -350,8 +415,34 @@ function renderGrid() {
                 tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${tileData.icon}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
             } else if (tileData.icon.startsWith('http') || tileData.icon.includes('simpleicons') || tileData.icon.startsWith('logos/')) {
                 if (state.settings.themeColor === 'vibrant') {
-                    // Vibrant: Render as Image to preserve original colors (e.g. multi-color Calendar, Brand colored simpleicons)
-                    tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${tileData.icon}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+                    // Vibrant: Render as Image to preserve original colors
+                    // Handle SimpleIcons coloring
+                    let iconSrc = tileData.icon;
+                    if (iconSrc.includes('simpleicons.org')) {
+                        // Calculate brightness of the brand color
+                        let hex = displayColor.replace('#', '');
+                        if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+
+                        // If color is very dark (like Twitter/X black), make it white. Otherwise use brand color (Netflix Red).
+                        const colorSuffix = yiq < 50 ? 'ffffff' : hex;
+
+                        // Avoid double suffixing if logic runs multiple times or URL is malformed
+                        if (!iconSrc.split('/').pop().match(/^[0-9A-Fa-f]{6}$/)) {
+                            iconSrc += '/' + colorSuffix;
+                        }
+                    }
+
+                    let imgStyle = "width: 100%; height: 100%; object-fit: contain;";
+                    // Special fix for Amazon in dark mode: Invert black to white, rotate orange back to orange
+                    if (tileData.name === 'Amazon') {
+                        imgStyle += " filter: invert(1) hue-rotate(180deg);";
+                    }
+
+                    tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${iconSrc}" style="${imgStyle}"></div>`;
                 } else {
                     // Standard/Mono: Render as Mask to force displayColor
                     tileEl.innerHTML = `<div class="tile-icon" style="background-color: ${displayColor}; -webkit-mask: url('${tileData.icon}') no-repeat center / contain; mask: url('${tileData.icon}') no-repeat center / contain; width: 48px; height: 48px;"></div>`;
@@ -828,6 +919,85 @@ function setupEventListeners() {
     tileUrlInput.addEventListener('blur', () => {
         if (tileUrlInput.value.length > 3 || tileNameInput.value.length > 2) fetchIconSuggestion();
     });
+}
+
+// Auth Logic
+function setupAuth() {
+    const authModal = document.getElementById('auth-modal');
+    const userBtn = document.getElementById('user-btn');
+    const closeAuthBtn = document.querySelector('.close-modal-auth');
+    const emailInput = document.getElementById('auth-email');
+    const passInput = document.getElementById('auth-password');
+    const actionBtn = document.getElementById('auth-action-btn');
+    const switchBtn = document.getElementById('switch-auth-mode');
+    const errorMsg = document.getElementById('auth-error');
+    const authTitle = document.getElementById('auth-title');
+
+    let isLogin = true;
+
+    // Listen to Auth State
+    auth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user) {
+            userBtn.innerHTML = `<i class="ri-user-smile-line" style="color: #06d6a0;"></i>`;
+            userBtn.title = `Logged in as ${user.email}`;
+            syncFromCloud();
+        } else {
+            userBtn.innerHTML = `<i class="ri-user-3-line"></i>`;
+            userBtn.title = "Login";
+        }
+    });
+
+    // UI Handlers
+    userBtn.onclick = () => {
+        if (currentUser) {
+            showConfirm("Logout?", () => {
+                auth.signOut().then(() => {
+                    showToast("Logged out", "success");
+                    // Optional: clear local state or revert to default? 
+                    // For now, keep state but stop syncing.
+                });
+            });
+        } else {
+            authModal.classList.remove('hidden');
+        }
+    };
+
+    closeAuthBtn.onclick = () => authModal.classList.add('hidden');
+
+    switchBtn.onclick = (e) => {
+        e.preventDefault();
+        isLogin = !isLogin;
+        authTitle.textContent = isLogin ? "Login" : "Register";
+        actionBtn.textContent = isLogin ? "Login" : "Register";
+        switchBtn.textContent = isLogin ? "Create Account" : "Back to Login";
+        errorMsg.style.display = 'none';
+    };
+
+    actionBtn.onclick = async () => {
+        const email = emailInput.value;
+        const pass = passInput.value;
+        if (!email || !pass) return;
+
+        actionBtn.innerHTML = `<i class="ri-loader-4-line spin"></i>`;
+        errorMsg.style.display = 'none';
+
+        try {
+            if (isLogin) {
+                await auth.signInWithEmailAndPassword(email, pass);
+                showToast("Welcome back!", "success");
+            } else {
+                await auth.createUserWithEmailAndPassword(email, pass);
+                showToast("Account created!", "success");
+            }
+            authModal.classList.add('hidden');
+        } catch (e) {
+            errorMsg.textContent = e.message;
+            errorMsg.style.display = 'block';
+        } finally {
+            actionBtn.textContent = isLogin ? "Login" : "Register";
+        }
+    };
 }
 
 // Custom Init for Webmix Upload
@@ -1503,14 +1673,8 @@ function renderWidgets() {
                     });
             };
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-                    () => fetchIPLocation() // Error/Denial -> IP fallback
-                );
-            } else {
-                fetchIPLocation();
-            }
+            // Force IP Location (Safari/Permissions bypass)
+            fetchIPLocation();
 
             // Listen for resize events
             el.addEventListener('widgetResize', renderWeather);
