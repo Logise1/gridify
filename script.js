@@ -327,8 +327,8 @@ function renderGrid() {
             const iconMap = {
                 // Streaming
                 'Netflix': 'https://cdn.simpleicons.org/netflix',
-                'HBO Max': 'logos/hbo.svg',
-                'HBO': 'logos/hbo.svg',
+                'HBO Max': 'logos/hbo.svg?v=2',
+                'HBO': 'logos/hbo.svg?v=2',
                 'Disney+': 'logos/disneyplus.svg',
                 'Prime Video': 'logos/primevideo.svg',
                 'Movistar+': 'logos/movistarplus.svg',
