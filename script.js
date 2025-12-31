@@ -327,7 +327,8 @@ function renderGrid() {
             const iconMap = {
                 // Streaming
                 'Netflix': 'https://cdn.simpleicons.org/netflix',
-                'HBO Max': 'https://cdn.simpleicons.org/hbomax',
+                'HBO Max': 'logos/hbo.svg',
+                'HBO': 'logos/hbo.svg',
                 'Disney+': 'logos/disneyplus.svg',
                 'Prime Video': 'logos/primevideo.svg',
                 'Movistar+': 'logos/movistarplus.svg',
@@ -359,7 +360,7 @@ function renderGrid() {
                 // Music
                 'Spotify': 'https://cdn.simpleicons.org/spotify',
                 'SoundCloud': 'https://cdn.simpleicons.org/soundcloud',
-                'Twitch': 'https://cdn.simpleicons.org/twitch',
+                'Twitch': 'logos/twitch.svg',
                 // Shopping
                 'Amazon': 'logos/amazon.svg', // Local
                 'AliExpress': 'https://cdn.simpleicons.org/aliexpress',
