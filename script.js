@@ -345,11 +345,17 @@ function renderGrid() {
             tileEl.style.backgroundColor = rgbaBg;
 
             // Icon Rendering: Font vs SVG Mask
-            // Special handling for Outlook (transparent logo)
+            // Special handling for Outlook (transparent logo) or Vibrant Mode (Original Colors)
             if (tileData.name === 'Outlook' && tileData.icon === 'logos/outlook.svg') {
                 tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${tileData.icon}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
             } else if (tileData.icon.startsWith('http') || tileData.icon.includes('simpleicons') || tileData.icon.startsWith('logos/')) {
-                tileEl.innerHTML = `<div class="tile-icon" style="background-color: ${displayColor}; -webkit-mask: url('${tileData.icon}') no-repeat center / contain; mask: url('${tileData.icon}') no-repeat center / contain; width: 48px; height: 48px;"></div>`;
+                if (state.settings.themeColor === 'vibrant') {
+                    // Vibrant: Render as Image to preserve original colors (e.g. multi-color Calendar, Brand colored simpleicons)
+                    tileEl.innerHTML = `<div class="tile-icon" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;"><img src="${tileData.icon}" style="width: 100%; height: 100%; object-fit: contain;"></div>`;
+                } else {
+                    // Standard/Mono: Render as Mask to force displayColor
+                    tileEl.innerHTML = `<div class="tile-icon" style="background-color: ${displayColor}; -webkit-mask: url('${tileData.icon}') no-repeat center / contain; mask: url('${tileData.icon}') no-repeat center / contain; width: 48px; height: 48px;"></div>`;
+                }
             } else {
                 tileEl.innerHTML = `<div class="tile-icon"><i class="${tileData.icon}" style="color: ${displayColor}"></i></div>`;
             }
